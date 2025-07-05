@@ -26,6 +26,24 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const handleError = (error: any, context: 'user' | 'guest') => {
+    const title = context === 'guest' ? 'Guest Login' : 'Authentication';
+    if (error.code === 'auth/operation-not-allowed') {
+      toast({
+        variant: 'destructive',
+        title: `${title} Disabled`,
+        description:
+          'Email/Password sign-in is not enabled. Please enable it in the Firebase console.',
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: `${title} Error`,
+        description: error.message,
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -42,11 +60,7 @@ export default function LoginPage() {
       });
       router.push('/');
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Error',
-        description: error.message,
-      });
+      handleError(error, 'user');
     }
   };
 
@@ -71,18 +85,10 @@ export default function LoginPage() {
           });
           router.push('/');
         } catch (signupError: any) {
-          toast({
-            variant: 'destructive',
-            title: 'Guest Signup Error',
-            description: signupError.message,
-          });
+          handleError(signupError, 'guest');
         }
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Guest Login Error',
-          description: error.message,
-        });
+        handleError(error, 'guest');
       }
     }
   };
