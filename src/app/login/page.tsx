@@ -55,34 +55,32 @@ export default function LoginPage() {
     const guestPassword = 'password123';
 
     try {
-      // signup also logs the user in
-      await signup(guestEmail, guestPassword);
+      await login(guestEmail, guestPassword);
       toast({
-        title: 'Welcome!',
-        description: 'Created a guest account and logged you in.',
+        title: 'Welcome back!',
+        description: 'Logged in as guest successfully.',
       });
       router.push('/');
     } catch (error: any) {
-      if (error.code === 'auth/email-already-in-use') {
-        // If account already exists, just log in
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         try {
-          await login(guestEmail, guestPassword);
+          await signup(guestEmail, guestPassword);
           toast({
-            title: 'Welcome back!',
-            description: 'Logged in as guest successfully.',
+            title: 'Welcome!',
+            description: 'Created guest account and logged you in.',
           });
           router.push('/');
-        } catch (loginError: any) {
+        } catch (signupError: any) {
           toast({
             variant: 'destructive',
-            title: 'Guest Login Error',
-            description: loginError.message,
+            title: 'Guest Signup Error',
+            description: signupError.message,
           });
         }
       } else {
         toast({
           variant: 'destructive',
-          title: 'Guest Signup Error',
+          title: 'Guest Login Error',
           description: error.message,
         });
       }
