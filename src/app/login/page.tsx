@@ -50,6 +50,45 @@ export default function LoginPage() {
     }
   };
 
+  const handleGuestLogin = async () => {
+    const guestEmail = 'guest@example.com';
+    const guestPassword = 'password123';
+
+    try {
+      // signup also logs the user in
+      await signup(guestEmail, guestPassword);
+      toast({
+        title: 'Welcome!',
+        description: 'Created a guest account and logged you in.',
+      });
+      router.push('/');
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        // If account already exists, just log in
+        try {
+          await login(guestEmail, guestPassword);
+          toast({
+            title: 'Welcome back!',
+            description: 'Logged in as guest successfully.',
+          });
+          router.push('/');
+        } catch (loginError: any) {
+          toast({
+            variant: 'destructive',
+            title: 'Guest Login Error',
+            description: loginError.message,
+          });
+        }
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Guest Signup Error',
+          description: error.message,
+        });
+      }
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
        <div className="absolute top-8 left-8">
@@ -97,6 +136,22 @@ export default function LoginPage() {
             <Button type="submit" className="w-full">
               {isLogin ? 'Sign In' : 'Sign Up'}
             </Button>
+            
+            <div className="relative my-4 w-full">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">
+                  Or
+                </span>
+              </div>
+            </div>
+
+            <Button variant="outline" className="w-full" onClick={handleGuestLogin} type="button">
+              Sign in as Guest
+            </Button>
+
             <Button
               type="button"
               variant="link"
