@@ -1,6 +1,7 @@
 import { Header } from '@/components/Header';
 import { EventList } from '@/components/EventList';
 import { CreateEventButton } from '@/components/CreateEventButton';
+import { Footer } from '@/components/Footer';
 
 export default function Home() {
   return (
@@ -15,9 +16,7 @@ export default function Home() {
         </div>
         <EventList />
       </main>
-      <footer className="py-6 text-center text-muted-foreground">
-        <p>Campus Hub &copy; {new Date().getFullYear()}</p>
-      </footer>
+      <Footer />
     </div>
   );
 }
