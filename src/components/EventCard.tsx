@@ -26,8 +26,8 @@ export function EventCard({ event }: EventCardProps) {
     <Card className="w-full flex flex-col md:flex-row overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl">
       <div className="relative w-full md:w-1/3 h-48 md:h-auto">
         <Image
-          src={`https://placehold.co/600x400.png`}
-          data-ai-hint="college event"
+          src={event.imageUrl || `https://placehold.co/600x400.png`}
+          data-ai-hint={event.title.split(' ').slice(0, 2).join(' ')}
           alt={event.title}
           fill
           className="object-cover"
