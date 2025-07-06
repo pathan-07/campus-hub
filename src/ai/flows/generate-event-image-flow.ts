@@ -32,18 +32,24 @@ const generateEventImageFlow = ai.defineFlow(
     outputSchema: GenerateEventImageOutputSchema,
   },
   async (input) => {
-    const { media } = await ai.generate({
-        model: 'googleai/gemini-2.0-flash-preview-image-generation',
-        prompt: `Generate a vibrant and inviting image for a university campus event titled '${input.title}'. The event is about: '${input.description}'. The style should be a modern, professional photograph that is engaging for students. Do not include any text in the image.`,
-        config: {
-            responseModalities: ['TEXT', 'IMAGE'],
-        },
-    });
+    try {
+      const { media } = await ai.generate({
+          model: 'googleai/gemini-2.0-flash-preview-image-generation',
+          prompt: `Generate a vibrant and inviting image for a university campus event titled '${input.title}'. The event is about: '${input.description}'. The style should be a modern, professional photograph that is engaging for students. Do not include any text in the image.`,
+          config: {
+              responseModalities: ['TEXT', 'IMAGE'],
+          },
+      });
 
-    if (!media?.url) {
-        throw new Error('Image generation failed to return an image.');
+      if (!media?.url) {
+          throw new Error('Image generation succeeded but did not return a valid image URL.');
+      }
+
+      return { imageUrl: media.url };
+    } catch (error) {
+      console.error("Error calling the image generation API:", error);
+      // Re-throw the error so the calling function in events.ts can catch it.
+      throw new Error('Failed to generate image due to an API error. Please check the server logs and ensure your GOOGLE_API_KEY is valid.');
     }
-
-    return { imageUrl: media.url };
   }
 );
