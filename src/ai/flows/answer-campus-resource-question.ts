@@ -44,7 +44,12 @@ const answerCampusResourceQuestionFlow = ai.defineFlow(
     outputSchema: AnswerCampusResourceQuestionOutputSchema,
   },
   async input => {
-    const {output} = await answerCampusResourceQuestionPrompt(input);
-    return output!;
+    try {
+      const {output} = await answerCampusResourceQuestionPrompt(input);
+      return output!;
+    } catch (error) {
+      console.error('Error in answerCampusResourceQuestionFlow:', error);
+      throw error; // Re-throw the error so the calling function can handle it.
+    }
   }
 );
