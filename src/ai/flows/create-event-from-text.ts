@@ -60,8 +60,8 @@ const createEventFlow = ai.defineFlow(
             return output;
         } catch (error) {
             console.error("Error in createEventFlow:", error);
-            // This error is propagated to the client. A common cause is a missing GOOGLE_API_KEY.
-            throw new Error("Failed to generate event. This is often caused by a missing or invalid GOOGLE_API_KEY in your .env file. Please check your configuration.");
+            // Re-throw the original error to provide more specific feedback on the client.
+            throw error;
         }
     }
 );
