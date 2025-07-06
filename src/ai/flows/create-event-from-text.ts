@@ -3,7 +3,7 @@
  * @fileOverview An AI agent that creates structured event data from unstructured text.
  *
  * - createEventFromText - A function that parses natural language and returns structured event data.
- * - CreateEventFromTextInput - The input type for the createEventFromText function.
+ * - CreateEventFromTextInput - The input type for the createEventFromtext function.
  * - EventData - The return type for the createEventFromText function.
  */
 
@@ -61,7 +61,7 @@ const createEventFlow = ai.defineFlow(
         } catch (error) {
             console.error("Error in createEventFlow:", error);
             // This error is propagated to the client. A common cause is a missing GOOGLE_API_KEY.
-            throw new Error("Failed to generate event. Please check server logs for details.");
+            throw new Error("Failed to generate event. This is often caused by a missing or invalid GOOGLE_API_KEY in your .env file. Please check your configuration.");
         }
     }
 );
