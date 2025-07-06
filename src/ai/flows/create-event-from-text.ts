@@ -17,11 +17,11 @@ const CreateEventFromTextInputSchema = z.object({
 export type CreateEventFromTextInput = z.infer<typeof CreateEventFromTextInputSchema>;
 
 const EventDataSchema = z.object({
-    title: z.string().describe('The title of the event.'),
-    description: z.string().describe('A detailed description of the event.'),
-    location: z.string().describe('The location where the event will take place.'),
-    date: z.string().describe("The event date and time in 'YYYY-MM-DDTHH:mm' format suitable for a datetime-local input."),
-    registrationLink: z.string().url().optional().describe('The registration link for the event, if mentioned.'),
+    title: z.string(),
+    description: z.string(),
+    location: z.string(),
+    date: z.string(),
+    registrationLink: z.string().optional(),
 });
 export type EventData = z.infer<typeof EventDataSchema>;
 
