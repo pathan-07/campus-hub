@@ -52,7 +52,16 @@ const createEventFlow = ai.defineFlow(
         outputSchema: EventDataSchema,
     },
     async (input) => {
-        const { output } = await createEventPrompt(input);
-        return output!;
+        try {
+            const { output } = await createEventPrompt(input);
+            if (!output) {
+                throw new Error("The AI model returned an empty response. Please try again.");
+            }
+            return output;
+        } catch (error) {
+            console.error("Error in createEventFlow:", error);
+            // This error is propagated to the client. A common cause is a missing GOOGLE_API_KEY.
+            throw new Error("Failed to generate event. Please check server logs for details.");
+        }
     }
 );

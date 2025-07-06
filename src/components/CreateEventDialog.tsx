@@ -83,11 +83,11 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
       setValue('registrationLink', result.registrationLink || '');
 
       setStep(2);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'AI Generation Failed',
-        description: 'Could not generate event details. Please try again or fill out the form manually.',
+        description: error.message || 'Could not generate event details. Please try again or fill out the form manually.',
       });
     } finally {
       setIsGenerating(false);
