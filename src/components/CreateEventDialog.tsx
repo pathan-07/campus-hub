@@ -40,6 +40,8 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -48,6 +50,17 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
   } = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
   });
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageDataUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const onSubmit = async (data: EventFormData) => {
     if (!user) {
@@ -64,12 +77,14 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
       await addEvent({
         ...data,
         date: new Date(data.date).toISOString(),
+        imageUrl: imageDataUrl ?? undefined,
       }, user);
       toast({
         title: 'Event Created!',
         description: 'Your event has been posted successfully.',
       });
       reset();
+      setImageDataUrl(null);
       onOpenChange(false);
     } catch (error) {
       toast({
@@ -83,7 +98,13 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        reset();
+        setImageDataUrl(null);
+      }
+      onOpenChange(isOpen);
+    }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="font-headline">Create a New Event</DialogTitle>
@@ -112,6 +133,10 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
               <Label htmlFor="date">Date and Time</Label>
               <Input id="date" type="datetime-local" {...register('date')} />
               {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="image">Event Image</Label>
+              <Input id="image" type="file" accept="image/*" onChange={handleImageChange} />
             </div>
           </div>
           <DialogFooter>
