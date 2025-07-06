@@ -9,10 +9,11 @@ import {
   doc,
   updateDoc,
 } from 'firebase/firestore';
-import { app } from './firebase';
+import { app, storage } from './firebase';
 import type { Event } from '@/types';
 import type { User } from 'firebase/auth';
 import { generateEventImage } from '@/ai/flows/generate-event-image-flow';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 const db = getFirestore(app);
 const eventsCollection = collection(db, 'events');
@@ -21,7 +22,6 @@ type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt' | 'i
 
 export async function addEvent(eventData: EventData, user: User) {
   try {
-    // Add the event document first to get its ID
     const docRef = await addDoc(eventsCollection, {
       ...eventData,
       authorId: user.uid,
@@ -29,14 +29,23 @@ export async function addEvent(eventData: EventData, user: User) {
       createdAt: serverTimestamp(),
     });
 
-    // Asynchronously generate and update the image
+    // Asynchronously generate image, upload to Storage, and update Firestore
     generateEventImage({ title: eventData.title, description: eventData.description })
-      .then(result => {
-        // Update the document with the generated image URL
-        updateDoc(doc(db, 'events', docRef.id), { imageUrl: result.imageUrl });
+      .then(async (result) => {
+        try {
+          const storageRef = ref(storage, `events/${docRef.id}.png`);
+          const base64Data = result.imageUrl.split(',')[1];
+          const uploadResult = await uploadString(storageRef, base64Data, 'base64', {
+            contentType: 'image/png'
+          });
+          const downloadUrl = await getDownloadURL(uploadResult.ref);
+          
+          await updateDoc(doc(db, 'events', docRef.id), { imageUrl: downloadUrl });
+        } catch (storageError) {
+          console.error(`Failed to upload generated image to Storage for event ${docRef.id}. Reason:`, storageError);
+        }
       })
       .catch(error => {
-        // Log the error but don't block the user. The event is already posted.
         console.error(`Image generation failed for event "${eventData.title}" (ID: ${docRef.id}). Reason:`, error);
       });
 
