@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bot, Send, X, MessageSquare, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,8 +12,10 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { answerCampusResourceQuestion } from '@/ai/flows/answer-campus-resource-question';
+import { getEventsStream } from '@/lib/events';
+import type { Event } from '@/types';
 
 type Message = {
   sender: 'user' | 'ai';
@@ -22,9 +24,23 @@ type Message = {
 
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      sender: 'ai',
+      text: 'Hi there! I can answer questions about campus resources and events. Ask me anything!',
+    },
+  ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = getEventsStream((newEvents) => {
+      setEvents(newEvents);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleSend = async () => {
     if (input.trim() === '') return;
@@ -35,13 +51,18 @@ export function Chatbot() {
     setIsLoading(true);
 
     try {
-      const result = await answerCampusResourceQuestion({ question: input });
+      const result = await answerCampusResourceQuestion({
+        question: input,
+        events: events,
+      });
       const aiMessage: Message = { sender: 'ai', text: result.answer };
       setMessages((prev) => [...prev, aiMessage]);
-    } catch (error) {
+    } catch (error: any) {
       const errorMessage: Message = {
         sender: 'ai',
-        text: 'Sorry, I am having trouble connecting. Please try again later.',
+        text:
+          error.message ||
+          'Sorry, I am having trouble connecting. Please try again later.',
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -130,7 +151,7 @@ export function Chatbot() {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about campus resources..."
+                placeholder="Ask about events..."
                 disabled={isLoading}
               />
               <Button type="submit" size="icon" disabled={isLoading}>
