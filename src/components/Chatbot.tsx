@@ -51,9 +51,17 @@ export function Chatbot() {
     setIsLoading(true);
 
     try {
+      const plainEvents = events.map((event) => ({
+        title: event.title,
+        description: event.description,
+        location: event.location,
+        date: event.date,
+        registrationLink: event.registrationLink,
+      }));
+
       const result = await answerCampusResourceQuestion({
         question: input,
-        events: events,
+        events: plainEvents,
       });
       const aiMessage: Message = { sender: 'ai', text: result.answer };
       setMessages((prev) => [...prev, aiMessage]);
