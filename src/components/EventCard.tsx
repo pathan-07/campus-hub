@@ -13,6 +13,7 @@ import type { Event } from '@/types';
 import { format } from 'date-fns';
 import { Calendar, MapPin, User } from 'lucide-react';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 
 interface EventCardProps {
   event: Event;
@@ -25,7 +26,7 @@ export function EventCard({ event }: EventCardProps) {
     <Card className="w-full flex flex-col md:flex-row overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl">
       <div className="relative w-full md:w-1/3 h-48 md:h-auto">
         <Image
-          src={event.imageUrl || `https://placehold.co/600x400.png`}
+          src={`https://placehold.co/600x400.png`}
           data-ai-hint="college event"
           alt={event.title}
           fill
@@ -52,9 +53,18 @@ export function EventCard({ event }: EventCardProps) {
             <User className="mr-2 h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Posted by {event.authorName}</span>
           </div>
-          <Badge variant="secondary">
-            {format(eventDate, 'MMM d')}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {event.registrationLink && (
+              <Button asChild size="sm">
+                <a href={event.registrationLink} target="_blank" rel="noopener noreferrer">
+                  Register
+                </a>
+              </Button>
+            )}
+            <Badge variant="secondary">
+              {format(eventDate, 'MMM d')}
+            </Badge>
+          </div>
         </CardFooter>
       </div>
     </Card>

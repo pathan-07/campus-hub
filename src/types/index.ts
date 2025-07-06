@@ -6,7 +6,7 @@ export type Event = {
   description:string;
   location: string;
   date: string; // ISO string
-  imageUrl?: string;
+  registrationLink?: string;
   authorId: string;
   authorName: string;
   createdAt: Timestamp;

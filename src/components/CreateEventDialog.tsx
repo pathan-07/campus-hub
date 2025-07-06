@@ -27,6 +27,7 @@ const eventSchema = z.object({
   date: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: 'Invalid date format',
   }),
+  registrationLink: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -40,7 +41,6 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
 
   const {
     register,
@@ -49,18 +49,10 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
     formState: { errors },
   } = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
+    defaultValues: {
+      registrationLink: '',
+    },
   });
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageDataUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const onSubmit = async (data: EventFormData) => {
     if (!user) {
@@ -74,17 +66,22 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
 
     setIsSubmitting(true);
     try {
-      await addEvent({
+      const eventData = {
         ...data,
         date: new Date(data.date).toISOString(),
-        imageUrl: imageDataUrl ?? undefined,
-      }, user);
+      };
+
+      // Don't store an empty string in the database
+      if (!eventData.registrationLink) {
+        delete (eventData as Partial<typeof eventData>).registrationLink;
+      }
+
+      await addEvent(eventData, user);
       toast({
         title: 'Event Created!',
         description: 'Your event has been posted successfully.',
       });
       reset();
-      setImageDataUrl(null);
       onOpenChange(false);
     } catch (error) {
       toast({
@@ -101,7 +98,6 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
     <Dialog open={open} onOpenChange={(isOpen) => {
       if (!isOpen) {
         reset();
-        setImageDataUrl(null);
       }
       onOpenChange(isOpen);
     }}>
@@ -135,8 +131,9 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
               {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="image">Event Image</Label>
-              <Input id="image" type="file" accept="image/*" onChange={handleImageChange} />
+              <Label htmlFor="registrationLink">Registration Link (optional)</Label>
+              <Input id="registrationLink" type="url" placeholder="https://example.com/register" {...register('registrationLink')} />
+              {errors.registrationLink && <p className="text-sm text-destructive">{errors.registrationLink.message}</p>}
             </div>
           </div>
           <DialogFooter>
