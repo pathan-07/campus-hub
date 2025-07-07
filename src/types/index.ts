@@ -14,6 +14,7 @@ export type Event = {
   createdAt: Timestamp;
   attendees: number;
   attendeeUids: string[];
+  checkedInUids?: string[];
 };
 
 export type UserProfile = {

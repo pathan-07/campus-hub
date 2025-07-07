@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
-import { BookOpenCheck, LogOut, LayoutDashboard, User, Trophy } from 'lucide-react';
+import { BookOpenCheck, LogOut, LayoutDashboard, User, Trophy, QrCode } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,6 +66,14 @@ export function Header() {
                     <span>Leaderboard</span>
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/scan" className="cursor-pointer">
+                    <QrCode className="mr-2 h-4 w-4" />
+                    <span>Scan Ticket</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

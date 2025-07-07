@@ -8,6 +8,7 @@ import {
   onSnapshot,
   runTransaction,
   doc,
+  arrayUnion,
 } from 'firebase/firestore';
 import { app } from './firebase';
 import type { Event, UserProfile } from '@/types';
@@ -15,7 +16,7 @@ import type { Event, UserProfile } from '@/types';
 const db = getFirestore(app);
 const eventsCollection = collection(db, 'events');
 
-type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt' | 'attendees' | 'attendeeUids'>;
+type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt' | 'attendees' | 'attendeeUids' | 'checkedInUids'>;
 
 export async function addEvent(eventData: EventData, user: UserProfile) {
   try {
@@ -26,6 +27,7 @@ export async function addEvent(eventData: EventData, user: UserProfile) {
       createdAt: serverTimestamp(),
       attendees: 0,
       attendeeUids: [],
+      checkedInUids: [],
     });
   } catch (error) {
     console.error('Error adding event to Firestore: ', error);
@@ -106,6 +108,37 @@ export async function registerForEvent(eventId: string, user: UserProfile) {
   } catch (error) {
     console.error("Error registering for event: ", error);
     // Re-throw the error to be handled by the UI
+    throw error;
+  }
+}
+
+export async function checkInUser(eventId: string, userId: string) {
+  const eventRef = doc(db, 'events', eventId);
+  try {
+    await runTransaction(db, async (transaction) => {
+      const eventDoc = await transaction.get(eventRef);
+      if (!eventDoc.exists()) {
+        throw new Error('Event not found!');
+      }
+
+      const eventData = eventDoc.data();
+
+      // Ensure user has RSVP'd
+      if (!eventData.attendeeUids?.includes(userId)) {
+        throw new Error('This user has not RSVP\'d for the event.');
+      }
+      
+      // Ensure user is not already checked in
+      if (eventData.checkedInUids?.includes(userId)) {
+         throw new Error('This user has already been checked in.');
+      }
+
+      transaction.update(eventRef, {
+        checkedInUids: arrayUnion(userId)
+      });
+    });
+  } catch (error) {
+    console.error("Error checking in user: ", error);
     throw error;
   }
 }
