@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { gujaratCities } from '@/lib/locations';
 
 export function EventList() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -30,10 +31,8 @@ export function EventList() {
   }, []);
 
   const locations = useMemo(() => {
-    if (loading) return [];
-    const allLocations = events.map((event) => event.location);
-    return ['all', ...Array.from(new Set(allLocations))];
-  }, [events, loading]);
+    return ['all', ...gujaratCities];
+  }, []);
 
   const filteredEvents = useMemo(() => {
     const now = new Date();
@@ -89,7 +88,6 @@ export function EventList() {
           <Select
             value={locationFilter}
             onValueChange={setLocationFilter}
-            disabled={locations.length <= 1}
           >
             <SelectTrigger id="location-filter" className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by location" />

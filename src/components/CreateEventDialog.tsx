@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/context/AuthContext';
@@ -21,6 +21,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { createEventFromText } from '@/ai/flows/create-event-from-text';
 import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { gujaratCities } from '@/lib/locations';
 
 const eventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters long'),
@@ -53,10 +55,12 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
     reset,
     formState: { errors },
     setValue,
+    control,
   } = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       registrationLink: '',
+      location: '',
     },
   });
 
@@ -217,7 +221,24 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="location">Location</Label>
-                  <Input id="location" {...register('location')} />
+                   <Controller
+                    name="location"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger id="location">
+                          <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {gujaratCities.map((city) => (
+                            <SelectItem key={city} value={city}>
+                              {city}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                   {errors.location && <p className="text-sm text-destructive">{errors.location.message}</p>}
                 </div>
                 <div className="grid gap-2">
