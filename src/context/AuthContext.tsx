@@ -111,14 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentUser = auth.currentUser;
     if (!currentUser) throw new Error("No user is signed in to update the profile.");
     
-    // Update Firebase Auth for properties it supports (displayName, photoURL)
-    await updateAuthProfile(currentUser, {
-      displayName: updates.displayName,
-      photoURL: updates.photoURL,
-    });
-
-    // Update the complete profile in our Firestore document.
-    // The onSnapshot listener will automatically update the local state.
+    // The single source of truth for our app's UI is Firestore.
+    // We only need to update the document here. The onSnapshot listener
+    // will automatically update the UI everywhere in the app.
     const userRef = doc(db, 'users', currentUser.uid);
     await updateDoc(userRef, updates);
   };
