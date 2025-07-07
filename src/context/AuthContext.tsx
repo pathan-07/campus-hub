@@ -17,12 +17,14 @@ import {
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import type { UserProfile } from '@/types';
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -30,7 +32,7 @@ interface AuthContextType {
   login: (email: string, pass:string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<void>;
-  updateUserProfile: (updates: Partial<Omit<UserProfile, 'uid' | 'email'>>) => Promise<void>;
+  updateUserProfile: (updates: { displayName: string; bio: string; photoFile?: File | null }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -101,27 +103,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
 
-  const updateUserProfile = async (updates: Partial<Omit<UserProfile, 'uid' | 'email'>>) => {
+  const updateUserProfile = async (updates: { displayName: string; bio: string; photoFile?: File | null }) => {
     const currentUser = auth.currentUser;
     if (!currentUser) throw new Error("No user is signed in to update the profile.");
 
-    // 1. Update Firebase Authentication profile if needed
-    const authUpdates: { displayName?: string | null; photoURL?: string | null } = {};
-    if (updates.displayName !== undefined) {
-      authUpdates.displayName = updates.displayName;
-    }
-    if (updates.photoURL !== undefined) {
-      authUpdates.photoURL = updates.photoURL;
+    let newPhotoURL = user?.photoURL || null;
+
+    if (updates.photoFile) {
+        const filePath = `profile-pictures/${currentUser.uid}`;
+        const storageRef = ref(storage, filePath);
+        const snapshot = await uploadBytes(storageRef, updates.photoFile);
+        newPhotoURL = await getDownloadURL(snapshot.ref);
     }
 
-    if (Object.keys(authUpdates).length > 0) {
-      await updateAuthProfile(currentUser, authUpdates);
-    }
+    const authUpdates = {
+        displayName: updates.displayName,
+        photoURL: newPhotoURL,
+    };
     
-    // 2. Update Firestore document (our single source of truth for the UI)
+    const firestoreUpdates = {
+        displayName: updates.displayName,
+        bio: updates.bio,
+        photoURL: newPhotoURL,
+    };
+
+    await updateAuthProfile(currentUser, authUpdates);
+
     const userRef = doc(db, 'users', currentUser.uid);
-    await updateDoc(userRef, updates);
-    // The onSnapshot listener will automatically refresh the app's state.
+    await updateDoc(userRef, firestoreUpdates);
   };
 
   const value = {

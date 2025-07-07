@@ -13,11 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, User } from 'lucide-react';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { app } from '@/lib/firebase';
 import imageCompression from 'browser-image-compression';
-
-const storage = getStorage(app);
 
 export default function ProfilePage() {
   const { user, loading, updateUserProfile } = useAuth();
@@ -49,9 +45,9 @@ export default function ProfilePage() {
         };
         reader.readAsDataURL(profilePicFile);
     } else {
-        setPreviewUrl(null);
+        setPreviewUrl(user?.photoURL || null);
     }
-  }, [profilePicFile]);
+  }, [profilePicFile, user]);
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -93,21 +89,11 @@ export default function ProfilePage() {
 
     setIsSubmitting(true);
     try {
-        let newPhotoURL = user.photoURL;
-        if (profilePicFile) {
-            const filePath = `profile-pictures/${user.uid}`;
-            const storageRef = ref(storage, filePath);
-            const snapshot = await uploadBytes(storageRef, profilePicFile);
-            newPhotoURL = await getDownloadURL(snapshot.ref);
-        }
-
-        const updates = {
-            displayName: displayName,
-            bio: bio,
-            photoURL: newPhotoURL,
-        };
-
-        await updateUserProfile(updates);
+        await updateUserProfile({
+          displayName: displayName,
+          bio: bio,
+          photoFile: profilePicFile,
+        });
 
         toast({
             title: 'Profile Updated',
