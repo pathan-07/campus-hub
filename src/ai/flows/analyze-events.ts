@@ -16,6 +16,7 @@ const EventSchema = z.object({
   venue: z.string(),
   location: z.string(),
   date: z.string(),
+  mapLink: z.string().optional(),
   registrationLink: z.string().optional(),
 });
 

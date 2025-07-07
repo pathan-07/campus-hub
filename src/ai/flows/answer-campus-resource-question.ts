@@ -17,6 +17,7 @@ const EventSchema = z.object({
   venue: z.string(),
   location: z.string(),
   date: z.string(),
+  mapLink: z.string().optional(),
   registrationLink: z.string().optional(),
 });
 
@@ -52,6 +53,7 @@ Current Events Data:
   Description: {{this.description}}
   Location: {{this.venue}}, {{this.location}}
   Date: {{this.date}}
+  {{#if this.mapLink}}Map: {{this.mapLink}}{{/if}}
   {{#if this.registrationLink}}Registration: {{this.registrationLink}}{{/if}}
 {{/each}}
 {{else}}

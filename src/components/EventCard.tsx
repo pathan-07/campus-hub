@@ -11,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { Event } from '@/types';
 import { format } from 'date-fns';
-import { Calendar, MapPin, User } from 'lucide-react';
+import { Calendar, MapPin, User, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface EventCardProps {
@@ -44,6 +44,14 @@ export function EventCard({ event }: EventCardProps) {
             <span className="text-muted-foreground">Posted by {event.authorName}</span>
           </div>
           <div className="flex items-center gap-2">
+            {event.mapLink && (
+              <Button asChild size="sm" variant="outline">
+                <a href={event.mapLink} target="_blank" rel="noopener noreferrer">
+                  <Map className="mr-1 h-4 w-4" />
+                  Map
+                </a>
+              </Button>
+            )}
             {event.registrationLink && (
               <Button asChild size="sm">
                 <a href={event.registrationLink} target="_blank" rel="noopener noreferrer">

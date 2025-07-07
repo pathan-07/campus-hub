@@ -32,6 +32,7 @@ const eventSchema = z.object({
   date: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: 'Invalid date format',
   }),
+  mapLink: z.string().url({ message: "Please enter a valid Google Maps URL." }).optional().or(z.literal('')),
   registrationLink: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
@@ -61,6 +62,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
     resolver: zodResolver(eventSchema),
     defaultValues: {
       registrationLink: '',
+      mapLink: '',
       location: '',
       venue: '',
     },
@@ -87,6 +89,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
       setValue('venue', result.venue);
       setValue('location', result.location);
       setValue('date', result.date);
+      setValue('mapLink', result.mapLink || '');
       setValue('registrationLink', result.registrationLink || '');
 
       setStep(2);
@@ -120,6 +123,9 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
 
       if (!eventData.registrationLink) {
         delete (eventData as Partial<typeof eventData>).registrationLink;
+      }
+      if (!eventData.mapLink) {
+        delete (eventData as Partial<typeof eventData>).mapLink;
       }
 
       await addEvent(eventData, user);
@@ -258,6 +264,11 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
                   <Label htmlFor="registrationLink">Registration Link (optional)</Label>
                   <Input id="registrationLink" type="url" placeholder="https://example.com/register" {...register('registrationLink')} />
                   {errors.registrationLink && <p className="text-sm text-destructive">{errors.registrationLink.message}</p>}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="mapLink">Google Maps Link (optional)</Label>
+                  <Input id="mapLink" type="url" placeholder="https://maps.app.goo.gl/..." {...register('mapLink')} />
+                  {errors.mapLink && <p className="text-sm text-destructive">{errors.mapLink.message}</p>}
                 </div>
             </div>
             <DialogFooter className="pt-4">

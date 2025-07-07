@@ -27,6 +27,7 @@ export function Dashboard() {
             venue: e.venue,
             location: e.location,
             date: e.date,
+            mapLink: e.mapLink,
             registrationLink: e.registrationLink
           }));
 

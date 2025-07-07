@@ -7,6 +7,7 @@ export type Event = {
   venue: string;
   location: string;
   date: string; // ISO string
+  mapLink?: string;
   registrationLink?: string;
   authorId: string;
   authorName: string;
