@@ -24,16 +24,17 @@ export function EventCard({ event }: EventCardProps) {
 
   return (
     <Card className="w-full flex flex-col md:flex-row overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl">
-      <div className="relative w-full md:w-1/3 h-48 md:h-auto">
-        <Image
-          src={event.imageUrl || `https://placehold.co/600x400.png`}
-          data-ai-hint={event.title.split(' ').slice(0, 2).join(' ')}
-          alt={event.title}
-          fill
-          className="object-cover"
-        />
-      </div>
-      <div className="w-full md:w-2/3 flex flex-col">
+      {event.imageUrl && (
+        <div className="relative w-full md:w-1/3 h-48 md:h-auto shrink-0">
+          <Image
+            src={event.imageUrl}
+            alt={event.title}
+            fill
+            className="object-cover"
+          />
+        </div>
+      )}
+      <div className="w-full flex flex-col">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">{event.title}</CardTitle>
           <CardDescription className="break-words">{event.description}</CardDescription>
