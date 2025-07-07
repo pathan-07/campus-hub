@@ -14,8 +14,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile as updateAuthProfile,
+  type User as FirebaseUser,
 } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import type { UserProfile } from '@/types';
@@ -47,51 +48,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    // This is the main listener for authentication state changes.
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        // If a user is authenticated, we set up a real-time listener for their profile document.
         const userRef = doc(db, 'users', firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (userSnap.exists()) {
-          const firestoreData = userSnap.data();
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firestoreData.displayName,
-            photoURL: firestoreData.photoURL,
-            bio: firestoreData.bio,
-          });
-        } else {
-          // New user or user from an old system, create their profile document
-          const profileData = {
-            displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
-            photoURL: firebaseUser.photoURL || null,
-            bio: '',
-          };
-          await setDoc(userRef, profileData);
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            ...profileData,
-          });
-        }
+        const unsubscribeProfile = onSnapshot(userRef, async (docSnap) => {
+          setLoading(true);
+          if (docSnap.exists()) {
+            // Profile exists, update our app state.
+            const firestoreData = docSnap.data();
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firestoreData.displayName,
+              photoURL: firestoreData.photoURL,
+              bio: firestoreData.bio,
+            });
+          } else {
+            // Profile doesn't exist, create it.
+            const profileData = {
+              displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
+              photoURL: firebaseUser.photoURL || null,
+              bio: '',
+            };
+            await setDoc(userRef, profileData);
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              ...profileData,
+            });
+          }
+          setLoading(false);
+        });
+        
+        // Return the profile listener's unsubscribe function to be called on cleanup.
+        return () => unsubscribeProfile();
       } else {
+        // No user is authenticated.
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
   const login = (email: string, pass: string) => {
     return signInWithEmailAndPassword(auth, email, pass);
   };
 
-  const signup = async (email: string, pass: string) => {
-    // We rely on the onAuthStateChanged listener to create the profile document in Firestore.
-    // This ensures a profile is created for any new user, regardless of sign-up method.
-    return await createUserWithEmailAndPassword(auth, email, pass);
+  const signup = (email: string, pass: string) => {
+    return createUserWithEmailAndPassword(auth, email, pass);
   };
 
   const logout = async () => {
@@ -100,22 +108,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUserProfile = async (updates: Partial<Omit<UserProfile, 'uid' | 'email'>>) => {
-    if (!user) throw new Error("No user is signed in to update the profile.");
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error("No user is signed in to update the profile.");
     
-    // 1. Update Firebase Auth for properties it supports (displayName, photoURL)
-    if (auth.currentUser) {
-      await updateAuthProfile(auth.currentUser, {
-        displayName: updates.displayName,
-        photoURL: updates.photoURL,
-      });
-    }
+    // Update Firebase Auth for properties it supports (displayName, photoURL)
+    await updateAuthProfile(currentUser, {
+      displayName: updates.displayName,
+      photoURL: updates.photoURL,
+    });
 
-    // 2. Update the complete profile in our Firestore document
-    const userRef = doc(db, 'users', user.uid);
+    // Update the complete profile in our Firestore document.
+    // The onSnapshot listener will automatically update the local state.
+    const userRef = doc(db, 'users', currentUser.uid);
     await updateDoc(userRef, updates);
-
-    // 3. Optimistically update local state to make the UI feel instant
-    setUser(prevUser => ({ ...prevUser!, ...updates }));
   };
 
   const value = {
