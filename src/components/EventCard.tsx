@@ -34,8 +34,8 @@ export function EventCard({ event }: EventCardProps) {
             <span>{format(eventDate, "MMMM d, yyyy 'at' h:mm a")}</span>
           </div>
           <div className="flex items-center text-sm text-muted-foreground">
-            <MapPin className="mr-2 h-4 w-4" />
-            <span>{event.location}</span>
+            <MapPin className="mr-2 h-4 w-4 shrink-0" />
+            <span>{event.venue}, {event.location}</span>
           </div>
         </CardContent>
         <CardFooter className="flex justify-between items-center">

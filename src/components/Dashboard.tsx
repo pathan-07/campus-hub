@@ -24,6 +24,7 @@ export function Dashboard() {
           const plainEvents = events.map(e => ({
             title: e.title,
             description: e.description,
+            venue: e.venue,
             location: e.location,
             date: e.date,
             registrationLink: e.registrationLink

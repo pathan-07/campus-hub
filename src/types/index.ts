@@ -4,6 +4,7 @@ export type Event = {
   id: string;
   title: string;
   description:string;
+  venue: string;
   location: string;
   date: string; // ISO string
   registrationLink?: string;

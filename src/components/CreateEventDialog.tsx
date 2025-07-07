@@ -27,7 +27,8 @@ import { gujaratCities } from '@/lib/locations';
 const eventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters long'),
   description: z.string().min(10, 'Description must be at least 10 characters long'),
-  location: z.string().min(3, 'Location is required'),
+  venue: z.string().min(3, 'Venue is required'),
+  location: z.string().min(1, 'City is required'),
   date: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: 'Invalid date format',
   }),
@@ -61,6 +62,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
     defaultValues: {
       registrationLink: '',
       location: '',
+      venue: '',
     },
   });
 
@@ -82,6 +84,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
 
       setValue('title', result.title);
       setValue('description', result.description);
+      setValue('venue', result.venue);
       setValue('location', result.location);
       setValue('date', result.date);
       setValue('registrationLink', result.registrationLink || '');
@@ -176,7 +179,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
         {step === 1 && (
           <div className="grid gap-4 py-4">
             <Textarea
-              placeholder="e.g., Let's host a study session for the final exams next Tuesday at 3pm in the library study room 4B."
+              placeholder="e.g., Let's host a study session for the final exams next Tuesday at 3pm in the library study room 4B, Ahmedabad."
               value={eventText}
               onChange={(e) => setEventText(e.target.value)}
               rows={6}
@@ -220,14 +223,19 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
                   {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="venue">Venue</Label>
+                  <Input id="venue" {...register('venue')} placeholder="e.g., Mahatma Mandir" />
+                  {errors.venue && <p className="text-sm text-destructive">{errors.venue.message}</p>}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="location">City</Label>
                    <Controller
                     name="location"
                     control={control}
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger id="location">
-                          <SelectValue placeholder="Select a location" />
+                          <SelectValue placeholder="Select a city" />
                         </SelectTrigger>
                         <SelectContent>
                           {gujaratCities.map((city) => (

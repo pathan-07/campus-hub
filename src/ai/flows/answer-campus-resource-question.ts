@@ -14,6 +14,7 @@ import {z} from 'genkit';
 const EventSchema = z.object({
   title: z.string(),
   description: z.string(),
+  venue: z.string(),
   location: z.string(),
   date: z.string(),
   registrationLink: z.string().optional(),
@@ -49,7 +50,7 @@ Current Events Data:
 {{#each events}}
 - Title: {{this.title}}
   Description: {{this.description}}
-  Location: {{this.location}}
+  Location: {{this.venue}}, {{this.location}}
   Date: {{this.date}}
   {{#if this.registrationLink}}Registration: {{this.registrationLink}}{{/if}}
 {{/each}}

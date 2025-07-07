@@ -19,7 +19,8 @@ export type CreateEventFromTextInput = z.infer<typeof CreateEventFromTextInputSc
 const EventDataSchema = z.object({
     title: z.string(),
     description: z.string(),
-    location: z.string(),
+    venue: z.string().describe("The specific venue or address of the event."),
+    location: z.string().describe("The city where the event is taking place."),
     date: z.string(),
     registrationLink: z.string().optional(),
 });
@@ -37,7 +38,7 @@ const createEventPrompt = ai.definePrompt({
 
 Today's date is {{currentDate}}. Use this to correctly interpret relative dates (e.g., "tomorrow", "next Friday").
 
-From the following text, extract the event's title, a detailed description, its location, the full date and time, and a registration link if provided.
+From the following text, extract the event's title, a detailed description, the specific venue (e.g., "Library Room 4B", "Grand Hall"), the city (location), the full date and time, and a registration link if provided.
 
 The output for the 'date' field MUST be in a format compatible with an HTML datetime-local input, which is 'YYYY-MM-DDTHH:mm'.
 

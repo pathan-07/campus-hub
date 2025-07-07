@@ -54,6 +54,7 @@ export function Chatbot() {
       const plainEvents = events.map((event) => ({
         title: event.title,
         description: event.description,
+        venue: event.venue,
         location: event.location,
         date: event.date,
         registrationLink: event.registrationLink,

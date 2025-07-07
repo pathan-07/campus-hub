@@ -13,6 +13,7 @@ import {z} from 'genkit';
 const EventSchema = z.object({
   title: z.string(),
   description: z.string(),
+  venue: z.string(),
   location: z.string(),
   date: z.string(),
   registrationLink: z.string().optional(),
@@ -49,7 +50,7 @@ Also, provide a structured breakdown of the number of events per location.
 Event Data:
 {{#each events}}
 - Title: {{this.title}}
-  Location: {{this.location}}
+  Location: {{this.venue}}, {{this.location}}
   Date: {{this.date}}
 {{/each}}
   `,
