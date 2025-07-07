@@ -20,4 +20,6 @@ export type UserProfile = {
   displayName: string | null;
   photoURL: string | null;
   bio?: string;
+  points: number;
+  badges: string[];
 };

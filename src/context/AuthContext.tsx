@@ -63,12 +63,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               displayName: firestoreData.displayName,
               photoURL: firestoreData.photoURL,
               bio: firestoreData.bio,
+              points: firestoreData.points || 0,
+              badges: firestoreData.badges || [],
             });
           } else {
             const profileData = {
               displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
               photoURL: firebaseUser.photoURL || null,
               bio: '',
+              points: 0,
+              badges: [],
             };
             await setDoc(userRef, profileData);
             setUser({
@@ -115,22 +119,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const snapshot = await uploadBytes(storageRef, updates.photoFile);
         newPhotoURL = await getDownloadURL(snapshot.ref);
     }
-
-    const authUpdates = {
-        displayName: updates.displayName,
-        photoURL: newPhotoURL,
-    };
     
-    const firestoreUpdates = {
+    // Update Firebase Auth profile
+    await updateAuthProfile(currentUser, {
+        displayName: updates.displayName,
+        photoURL: newPhotoURL ?? undefined,
+    });
+
+    // Update Firestore document
+    const userRef = doc(db, 'users', currentUser.uid);
+    await updateDoc(userRef, {
         displayName: updates.displayName,
         bio: updates.bio,
         photoURL: newPhotoURL,
-    };
-
-    await updateAuthProfile(currentUser, authUpdates);
-
-    const userRef = doc(db, 'users', currentUser.uid);
-    await updateDoc(userRef, firestoreUpdates);
+    });
   };
 
   const value = {

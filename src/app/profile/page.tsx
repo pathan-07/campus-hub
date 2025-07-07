@@ -12,8 +12,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, User } from 'lucide-react';
+import { Loader2, User, Trophy, Star } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
+import { Badge } from '@/components/ui/badge';
 
 export default function ProfilePage() {
   const { user, loading, updateUserProfile } = useAuth();
@@ -126,76 +127,117 @@ export default function ProfilePage() {
         <h1 className="text-3xl md:text-5xl font-headline text-foreground mb-8">
           My Profile
         </h1>
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle>Profile Settings</CardTitle>
-            <CardDescription>Update your display name, bio, and profile picture.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="flex items-center space-x-6">
-                    <Avatar className="h-24 w-24">
-                        <AvatarImage src={previewUrl || user.photoURL || undefined} />
-                        <AvatarFallback className="text-3xl">
-                            <User className="h-12 w-12 text-muted-foreground"/>
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <Label htmlFor="picture">Profile Picture</Label>
-                        <Input id="picture" type="file" accept="image/png, image/jpeg" onChange={handleFileChange} disabled={isCompressing || isSubmitting} />
-                        <p className="text-sm text-muted-foreground">PNG, JPG up to 10MB.</p>
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Settings</CardTitle>
+                <CardDescription>Update your display name, bio, and profile picture.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="flex items-center space-x-6">
+                        <Avatar className="h-24 w-24">
+                            <AvatarImage src={previewUrl || user.photoURL || undefined} />
+                            <AvatarFallback className="text-3xl">
+                                <User className="h-12 w-12 text-muted-foreground"/>
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="grid w-full max-w-sm items-center gap-1.5">
+                            <Label htmlFor="picture">Profile Picture</Label>
+                            <Input id="picture" type="file" accept="image/png, image/jpeg" onChange={handleFileChange} disabled={isCompressing || isSubmitting} />
+                            <p className="text-sm text-muted-foreground">PNG, JPG up to 10MB.</p>
+                        </div>
                     </div>
-                </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="displayName">Display Name</Label>
-                    <Input 
-                        id="displayName" 
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder="Your Name"
+                    <div className="space-y-2">
+                        <Label htmlFor="displayName">Display Name</Label>
+                        <Input 
+                            id="displayName" 
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            placeholder="Your Name"
+                            disabled={isCompressing || isSubmitting}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bio">Bio</Label>
+                      <Textarea
+                        id="bio"
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        placeholder="Tell us a little about yourself."
+                        rows={3}
                         disabled={isCompressing || isSubmitting}
-                    />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Tell us a little about yourself."
-                    rows={3}
-                    disabled={isCompressing || isSubmitting}
-                  />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input 
-                        id="email" 
-                        value={user.email || ''}
-                        disabled
-                        className="cursor-not-allowed"
-                    />
-                </div>
+                      />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input 
+                            id="email" 
+                            value={user.email || ''}
+                            disabled
+                            className="cursor-not-allowed"
+                        />
+                    </div>
 
-                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isCompressing}>
-                    {isCompressing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving
-                      </>
-                    ) : (
-                      'Save Changes'
-                    )}
-                </Button>
-            </form>
-          </CardContent>
-        </Card>
+                    <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isCompressing}>
+                        {isCompressing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving
+                          </>
+                        ) : (
+                          'Save Changes'
+                        )}
+                    </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="md:col-span-1 space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline">
+                  <Trophy className="text-primary"/>
+                  Your Stats
+                </CardTitle>
+                <CardDescription>Your engagement and achievements.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-bold text-foreground">Points</span>
+                  <span className="text-2xl font-bold text-primary">{user.points}</span>
+                </div>
+              </CardContent>
+            </Card>
+             <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline">
+                  <Star className="text-primary"/>
+                  Your Badges
+                </CardTitle>
+                 <CardDescription>Badges you've collected.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                 {user.badges.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                        {user.badges.map(badge => (
+                            <Badge key={badge} variant="secondary">{badge}</Badge>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">No badges earned yet. Participate in events to earn them!</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </main>
       <Footer />
     </div>
