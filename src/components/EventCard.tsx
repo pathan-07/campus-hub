@@ -11,8 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { Event } from '@/types';
 import { format } from 'date-fns';
-import { Calendar, MapPin, User, ImageIcon } from 'lucide-react';
-import Image from 'next/image';
+import { Calendar, MapPin, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface EventCardProps {
@@ -23,22 +22,7 @@ export function EventCard({ event }: EventCardProps) {
   const eventDate = new Date(event.date);
 
   return (
-    <Card className="w-full flex flex-col md:flex-row overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl">
-      <div className="relative w-full md:w-1/3 h-48 md:h-auto shrink-0 bg-muted/50 flex items-center justify-center">
-        {event.imageUrl ? (
-          <Image
-            src={event.imageUrl}
-            alt={event.title}
-            fill
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex flex-col items-center text-muted-foreground p-4 text-center">
-            <ImageIcon className="w-10 h-10 animate-pulse" />
-            <p className="text-xs mt-2 font-semibold">Generating Image...</p>
-          </div>
-        )}
-      </div>
+    <Card className="w-full flex flex-col overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl">
       <div className="w-full flex flex-col">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">{event.title}</CardTitle>
