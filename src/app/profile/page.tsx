@@ -8,6 +8,7 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +25,7 @@ export default function ProfilePage() {
   const { toast } = useToast();
   
   const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
@@ -35,6 +37,7 @@ export default function ProfilePage() {
     }
     if (user) {
       setDisplayName(user.displayName || '');
+      setBio(user.bio || '');
     }
   }, [user, loading, router]);
   
@@ -90,18 +93,21 @@ export default function ProfilePage() {
 
     setIsSubmitting(true);
     try {
-        let photoURL = user.photoURL;
+        let newPhotoURL = user.photoURL;
         if (profilePicFile) {
             const filePath = `profile-pictures/${user.uid}`;
             const storageRef = ref(storage, filePath);
             const snapshot = await uploadBytes(storageRef, profilePicFile);
-            photoURL = await getDownloadURL(snapshot.ref);
+            newPhotoURL = await getDownloadURL(snapshot.ref);
         }
 
-        await updateUserProfile({
+        const updates = {
             displayName: displayName,
-            photoURL: photoURL || undefined,
-        });
+            bio: bio,
+            photoURL: newPhotoURL,
+        };
+
+        await updateUserProfile(updates);
 
         toast({
             title: 'Profile Updated',
@@ -137,7 +143,7 @@ export default function ProfilePage() {
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
             <CardTitle>Profile Settings</CardTitle>
-            <CardDescription>Update your display name and profile picture.</CardDescription>
+            <CardDescription>Update your display name, bio, and profile picture.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -164,6 +170,17 @@ export default function ProfilePage() {
                         placeholder="Your Name"
                         disabled={isCompressing || isSubmitting}
                     />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell us a little about yourself."
+                    rows={3}
+                    disabled={isCompressing || isSubmitting}
+                  />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>

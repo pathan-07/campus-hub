@@ -8,15 +8,14 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import { app } from './firebase';
-import type { Event } from '@/types';
-import type { User } from 'firebase/auth';
+import type { Event, UserProfile } from '@/types';
 
 const db = getFirestore(app);
 const eventsCollection = collection(db, 'events');
 
 type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt'>;
 
-export async function addEvent(eventData: EventData, user: User) {
+export async function addEvent(eventData: EventData, user: UserProfile) {
   try {
     await addDoc(eventsCollection, {
       ...eventData,

@@ -5,29 +5,31 @@ import {
   useContext,
   useEffect,
   useState,
-  ReactNode,
+  type ReactNode,
 } from 'react';
 import {
   getAuth,
   onAuthStateChanged,
-  User,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  updateProfile,
+  updateProfile as updateAuthProfile,
 } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import type { UserProfile } from '@/types';
 
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
   loading: boolean;
-  login: (email: string, pass: string) => Promise<any>;
+  login: (email: string, pass:string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<void>;
-  updateUserProfile: (updates: { displayName?: string; photoURL?: string }) => Promise<void>;
+  updateUserProfile: (updates: Partial<Omit<UserProfile, 'uid' | 'email'>>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -40,13 +42,42 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const firestoreData = userSnap.data();
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firestoreData.displayName,
+            photoURL: firestoreData.photoURL,
+            bio: firestoreData.bio,
+          });
+        } else {
+          // New user or user from an old system, create their profile document
+          const profileData = {
+            displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
+            photoURL: firebaseUser.photoURL || null,
+            bio: '',
+          };
+          await setDoc(userRef, profileData);
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            ...profileData,
+          });
+        }
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
@@ -57,8 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return signInWithEmailAndPassword(auth, email, pass);
   };
 
-  const signup = (email: string, pass: string) => {
-    return createUserWithEmailAndPassword(auth, email, pass);
+  const signup = async (email: string, pass: string) => {
+    // We rely on the onAuthStateChanged listener to create the profile document in Firestore.
+    // This ensures a profile is created for any new user, regardless of sign-up method.
+    return await createUserWithEmailAndPassword(auth, email, pass);
   };
 
   const logout = async () => {
@@ -66,16 +99,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
 
-  const updateUserProfile = async (updates: { displayName?: string; photoURL?: string }) => {
+  const updateUserProfile = async (updates: Partial<Omit<UserProfile, 'uid' | 'email'>>) => {
+    if (!user) throw new Error("No user is signed in to update the profile.");
+    
+    // 1. Update Firebase Auth for properties it supports (displayName, photoURL)
     if (auth.currentUser) {
-      await updateProfile(auth.currentUser, updates);
-      // After updating, reload the user to get the latest profile data
-      await auth.currentUser.reload();
-      // Create a new user object to force a re-render in components that use this context.
-      setUser({ ...auth.currentUser });
-    } else {
-      throw new Error("No user is signed in to update the profile.");
+      await updateAuthProfile(auth.currentUser, {
+        displayName: updates.displayName,
+        photoURL: updates.photoURL,
+      });
     }
+
+    // 2. Update the complete profile in our Firestore document
+    const userRef = doc(db, 'users', user.uid);
+    await updateDoc(userRef, updates);
+
+    // 3. Optimistically update local state to make the UI feel instant
+    setUser(prevUser => ({ ...prevUser!, ...updates }));
   };
 
   const value = {

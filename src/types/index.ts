@@ -11,3 +11,11 @@ export type Event = {
   authorName: string;
   createdAt: Timestamp;
 };
+
+export type UserProfile = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  bio?: string;
+};
