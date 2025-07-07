@@ -107,6 +107,7 @@ export default function ProfilePage() {
             title: 'Profile Updated',
             description: 'Your profile has been successfully updated.',
         });
+        setProfilePicFile(null);
     } catch (error: any) {
         toast({
             variant: 'destructive',
@@ -115,7 +116,6 @@ export default function ProfilePage() {
         });
     } finally {
         setIsSubmitting(false);
-        setProfilePicFile(null);
     }
   };
 

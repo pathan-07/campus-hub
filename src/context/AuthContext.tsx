@@ -69,8 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUserProfile = async (updates: { displayName?: string; photoURL?: string }) => {
     if (auth.currentUser) {
       await updateProfile(auth.currentUser, updates);
+      // After updating, reload the user to get the latest profile data
+      await auth.currentUser.reload();
       // Create a new user object to force a re-render in components that use this context.
-      setUser(auth.currentUser ? { ...auth.currentUser } : null);
+      setUser({ ...auth.currentUser });
     } else {
       throw new Error("No user is signed in to update the profile.");
     }
