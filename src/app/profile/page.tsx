@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, User } from 'lucide-react';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app } from '@/lib/firebase';
+import imageCompression from 'browser-image-compression';
 
 const storage = getStorage(app);
 
@@ -48,18 +49,38 @@ export default function ProfilePage() {
     }
   }, [profilePicFile]);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit before compression
         toast({
           variant: 'destructive',
           title: 'File too large',
-          description: 'Please select an image smaller than 2MB.',
+          description: 'Please select an image smaller than 5MB.',
         });
         return;
       }
-      setProfilePicFile(file);
+
+      try {
+        toast({
+            title: 'Compressing image...',
+            description: 'This may take a moment for large files.',
+        });
+        const options = {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, options);
+        setProfilePicFile(compressedFile);
+      } catch (error) {
+        console.error("Image compression failed:", error)
+        toast({
+          variant: 'destructive',
+          title: 'Compression Failed',
+          description: 'There was an error processing your image. Please try a different one.',
+        });
+      }
     }
   };
 
@@ -130,7 +151,7 @@ export default function ProfilePage() {
                     <div className="grid w-full max-w-sm items-center gap-1.5">
                         <Label htmlFor="picture">Profile Picture</Label>
                         <Input id="picture" type="file" accept="image/png, image/jpeg" onChange={handleFileChange} />
-                        <p className="text-sm text-muted-foreground">PNG, JPG up to 2MB.</p>
+                        <p className="text-sm text-muted-foreground">PNG, JPG up to 5MB.</p>
                     </div>
                 </div>
 
