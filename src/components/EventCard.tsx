@@ -34,9 +34,10 @@ export function EventCard({ event }: EventCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
-
-  const isUserAttending = user ? event.attendeeUids?.includes(user.uid) : false;
-  const isUserHost = user ? event.authorId === user.uid : false;
+  
+  const isCollegeEvent = event.type === 'college';
+  const isUserAttending = user && isCollegeEvent ? event.attendeeUids?.includes(user.uid) : false;
+  const isUserHost = user && isCollegeEvent ? event.authorId === user.uid : false;
 
   const handleRsvp = async () => {
     if (!user) {
@@ -97,10 +98,12 @@ export function EventCard({ event }: EventCardProps) {
               <MapPin className="mr-2 h-4 w-4 shrink-0" />
               <span>{event.venue}, {event.location}</span>
             </div>
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Users className="mr-2 h-4 w-4 shrink-0" />
-              <span>{event.attendees || 0} going</span>
-            </div>
+            {isCollegeEvent && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Users className="mr-2 h-4 w-4 shrink-0" />
+                <span>{event.attendees || 0} going</span>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex-wrap gap-y-4 justify-between items-center">
             <div className="flex items-center text-sm">
@@ -116,32 +119,37 @@ export function EventCard({ event }: EventCardProps) {
                   </a>
                 </Button>
               )}
-              {event.registrationLink && (
-                <Button asChild size="sm">
-                  <a href={event.registrationLink} target="_blank" rel="noopener noreferrer">
-                    Register
-                  </a>
+
+              {isCollegeEvent ? (
+                <Button
+                  size="sm"
+                  variant={isUserAttending ? 'secondary' : 'default'}
+                  onClick={handleRsvp}
+                  disabled={isLoading || isUserAttending || isUserHost}
+                >
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : isUserHost ? (
+                    "You're Hosting"
+                  ) : isUserAttending ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      You're Going!
+                    </>
+                  ) : (
+                    "I'm Going!"
+                  )}
                 </Button>
+              ) : (
+                 event.registrationLink && (
+                    <Button asChild size="sm">
+                      <a href={event.registrationLink} target="_blank" rel="noopener noreferrer">
+                        Register
+                      </a>
+                    </Button>
+                  )
               )}
-              <Button
-                size="sm"
-                variant={isUserAttending ? 'secondary' : 'default'}
-                onClick={handleRsvp}
-                disabled={isLoading || isUserAttending || isUserHost}
-              >
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : isUserHost ? (
-                  "You're Hosting"
-                ) : isUserAttending ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    You're Going!
-                  </>
-                ) : (
-                  "I'm Going!"
-                )}
-              </Button>
+             
               <Badge variant="secondary">
                 {format(eventDate, 'MMM d')}
               </Badge>

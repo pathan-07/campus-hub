@@ -23,6 +23,7 @@ import { createEventFromText } from '@/ai/flows/create-event-from-text';
 import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { gujaratCities } from '@/lib/locations';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const eventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters long'),
@@ -32,6 +33,7 @@ const eventSchema = z.object({
   date: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: 'Invalid date format',
   }),
+  type: z.enum(['college', 'other'], { required_error: 'You must select an event type.' }),
   mapLink: z.string().url({ message: "Please enter a valid Google Maps URL." }).optional().or(z.literal('')),
   registrationLink: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
@@ -65,6 +67,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
       mapLink: '',
       location: '',
       venue: '',
+      type: 'college',
     },
   });
 
@@ -89,6 +92,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
       setValue('venue', result.venue);
       setValue('location', result.location);
       setValue('date', result.date);
+      setValue('type', result.type);
       setValue('mapLink', result.mapLink || '');
       setValue('registrationLink', result.registrationLink || '');
 
@@ -219,6 +223,32 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
           <form onSubmit={handleSubmit(onSubmit)} className="pt-4">
             <div className="max-h-[60vh] overflow-y-auto pr-4">
               <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label>Event Type</Label>
+                    <Controller
+                      name="type"
+                      control={control}
+                      render={({ field }) => (
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex space-x-4 pt-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="college" id="college" />
+                            <Label htmlFor="college">College Event</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="other" id="other" />
+                            <Label htmlFor="other">Other/Public</Label>
+                          </div>
+                        </RadioGroup>
+                      )}
+                    />
+                     <p className="text-xs text-muted-foreground">College events have points, badges, and QR code tickets. Other events are for general announcements.</p>
+                    {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
+                  </div>
+
                   <div className="grid gap-2">
                     <Label htmlFor="title">Event Title</Label>
                     <Input id="title" {...register('title')} />
