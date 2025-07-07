@@ -10,6 +10,7 @@ import {
 import { app } from './firebase';
 import type { Event } from '@/types';
 import type { User } from 'firebase/auth';
+import { generateAndSaveEventImage } from '@/ai/flows/generate-event-image';
 
 const db = getFirestore(app);
 const eventsCollection = collection(db, 'events');
@@ -18,12 +19,23 @@ type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt' | 'i
 
 export async function addEvent(eventData: EventData, user: User) {
   try {
-    await addDoc(eventsCollection, {
+    const docRef = await addDoc(eventsCollection, {
       ...eventData,
       authorId: user.uid,
       authorName: user.email?.split('@')[0] || 'Anonymous',
       createdAt: serverTimestamp(),
     });
+
+    // Don't wait for the image to be generated and saved.
+    // Let it run in the background.
+    generateAndSaveEventImage({
+      eventId: docRef.id,
+      eventTitle: eventData.title,
+      eventDescription: eventData.description,
+    }).catch((error) => {
+      console.error("Error dispatching image generation flow:", error);
+    });
+    
   } catch (error) {
     console.error('Error adding event to Firestore: ', error);
     throw new Error('Could not add event.');
