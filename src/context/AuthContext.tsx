@@ -14,6 +14,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -26,6 +27,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<any>;
   signup: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<void>;
+  updateUserProfile: (updates: { displayName?: string; photoURL?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -34,6 +36,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   signup: async () => {},
   logout: async () => {},
+  updateUserProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -63,12 +66,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
 
+  const updateUserProfile = async (updates: { displayName?: string; photoURL?: string }) => {
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, updates);
+      // Create a new user object to force a re-render in components that use this context.
+      setUser(auth.currentUser ? { ...auth.currentUser } : null);
+    } else {
+      throw new Error("No user is signed in to update the profile.");
+    }
+  };
+
   const value = {
     user,
     loading,
     login,
     signup,
     logout,
+    updateUserProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

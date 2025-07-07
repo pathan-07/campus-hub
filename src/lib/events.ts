@@ -21,7 +21,7 @@ export async function addEvent(eventData: EventData, user: User) {
     await addDoc(eventsCollection, {
       ...eventData,
       authorId: user.uid,
-      authorName: user.email?.split('@')[0] || 'Anonymous',
+      authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
       createdAt: serverTimestamp(),
     });
   } catch (error) {
