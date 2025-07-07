@@ -48,15 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // This is the main listener for authentication state changes.
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // If a user is authenticated, we set up a real-time listener for their profile document.
         const userRef = doc(db, 'users', firebaseUser.uid);
         const unsubscribeProfile = onSnapshot(userRef, async (docSnap) => {
           setLoading(true);
           if (docSnap.exists()) {
-            // Profile exists, update our app state.
             const firestoreData = docSnap.data();
             setUser({
               uid: firebaseUser.uid,
@@ -66,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               bio: firestoreData.bio,
             });
           } else {
-            // Profile doesn't exist, create it.
             const profileData = {
               displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
               photoURL: firebaseUser.photoURL || null,
@@ -82,10 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         });
         
-        // Return the profile listener's unsubscribe function to be called on cleanup.
         return () => unsubscribeProfile();
       } else {
-        // No user is authenticated.
         setUser(null);
         setLoading(false);
       }
@@ -110,12 +104,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUserProfile = async (updates: Partial<Omit<UserProfile, 'uid' | 'email'>>) => {
     const currentUser = auth.currentUser;
     if (!currentUser) throw new Error("No user is signed in to update the profile.");
+
+    // 1. Update Firebase Authentication profile if needed
+    const authUpdates: { displayName?: string | null; photoURL?: string | null } = {};
+    if (updates.displayName !== undefined) {
+      authUpdates.displayName = updates.displayName;
+    }
+    if (updates.photoURL !== undefined) {
+      authUpdates.photoURL = updates.photoURL;
+    }
+
+    if (Object.keys(authUpdates).length > 0) {
+      await updateAuthProfile(currentUser, authUpdates);
+    }
     
-    // The single source of truth for our app's UI is Firestore.
-    // We only need to update the document here. The onSnapshot listener
-    // will automatically update the UI everywhere in the app.
+    // 2. Update Firestore document (our single source of truth for the UI)
     const userRef = doc(db, 'users', currentUser.uid);
     await updateDoc(userRef, updates);
+    // The onSnapshot listener will automatically refresh the app's state.
   };
 
   const value = {
