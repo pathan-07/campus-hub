@@ -65,8 +65,8 @@ export default function ProfilePage() {
       setIsCompressing(true);
       try {
         const options = {
-            maxSizeMB: 0.5,
-            maxWidthOrHeight: 1024,
+            maxSizeMB: 0.1,
+            maxWidthOrHeight: 800,
             useWebWorker: true,
         };
         const compressedFile = await imageCompression(file, options);
