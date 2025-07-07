@@ -26,6 +26,7 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('');
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
   useEffect(() => {
@@ -52,23 +53,20 @@ export default function ProfilePage() {
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit before compression
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
         toast({
           variant: 'destructive',
           title: 'File too large',
-          description: 'Please select an image smaller than 5MB.',
+          description: 'Please select an image smaller than 10MB.',
         });
         return;
       }
 
+      setIsCompressing(true);
       try {
-        toast({
-            title: 'Compressing image...',
-            description: 'This may take a moment for large files.',
-        });
         const options = {
-            maxSizeMB: 1,
-            maxWidthOrHeight: 1920,
+            maxSizeMB: 0.5,
+            maxWidthOrHeight: 1024,
             useWebWorker: true,
         };
         const compressedFile = await imageCompression(file, options);
@@ -80,6 +78,8 @@ export default function ProfilePage() {
           title: 'Compression Failed',
           description: 'There was an error processing your image. Please try a different one.',
         });
+      } finally {
+        setIsCompressing(false);
       }
     }
   };
@@ -150,8 +150,8 @@ export default function ProfilePage() {
                     </Avatar>
                     <div className="grid w-full max-w-sm items-center gap-1.5">
                         <Label htmlFor="picture">Profile Picture</Label>
-                        <Input id="picture" type="file" accept="image/png, image/jpeg" onChange={handleFileChange} />
-                        <p className="text-sm text-muted-foreground">PNG, JPG up to 5MB.</p>
+                        <Input id="picture" type="file" accept="image/png, image/jpeg" onChange={handleFileChange} disabled={isCompressing || isSubmitting} />
+                        <p className="text-sm text-muted-foreground">PNG, JPG up to 10MB.</p>
                     </div>
                 </div>
 
@@ -162,6 +162,7 @@ export default function ProfilePage() {
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         placeholder="Your Name"
+                        disabled={isCompressing || isSubmitting}
                     />
                 </div>
                  <div className="space-y-2">
@@ -174,8 +175,13 @@ export default function ProfilePage() {
                     />
                 </div>
 
-                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
-                    {isSubmitting ? (
+                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isCompressing}>
+                    {isCompressing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Saving...
