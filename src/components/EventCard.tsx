@@ -18,6 +18,9 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { registerForEvent } from '@/lib/events';
+import * as QRCode from 'qrcode';
+import { QrCodeDialog } from './QrCodeDialog';
+
 
 interface EventCardProps {
   event: Event;
@@ -29,6 +32,8 @@ export function EventCard({ event }: EventCardProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
 
   const isUserAttending = user ? event.attendeeUids?.includes(user.uid) : false;
   const isUserHost = user ? event.authorId === user.uid : false;
@@ -50,6 +55,20 @@ export function EventCard({ event }: EventCardProps) {
         title: 'Success!',
         description: `You are now registered for "${event.title}". You earned 25 points!`,
       });
+
+      // Generate QR Code
+      const ticketData = {
+        userId: user.uid,
+        eventId: event.id,
+        userName: user.displayName,
+        userEmail: user.email,
+      };
+      const qrDataString = JSON.stringify(ticketData);
+      const dataUrl = await QRCode.toDataURL(qrDataString);
+
+      setQrCodeDataUrl(dataUrl);
+      setIsQrDialogOpen(true);
+
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -62,72 +81,80 @@ export function EventCard({ event }: EventCardProps) {
   };
 
   return (
-    <Card className="w-full flex flex-col overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl">
-      <div className="w-full flex flex-col">
-        <CardHeader>
-          <CardTitle className="font-headline text-2xl">{event.title}</CardTitle>
-          <CardDescription className="break-words">{event.description}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex-grow space-y-4">
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Calendar className="mr-2 h-4 w-4" />
-            <span>{format(eventDate, "MMMM d, yyyy 'at' h:mm a")}</span>
-          </div>
-          <div className="flex items-center text-sm text-muted-foreground">
-            <MapPin className="mr-2 h-4 w-4 shrink-0" />
-            <span>{event.venue}, {event.location}</span>
-          </div>
-           <div className="flex items-center text-sm text-muted-foreground">
-            <Users className="mr-2 h-4 w-4 shrink-0" />
-            <span>{event.attendees || 0} going</span>
-          </div>
-        </CardContent>
-        <CardFooter className="flex-wrap gap-y-4 justify-between items-center">
-          <div className="flex items-center text-sm">
-            <User className="mr-2 h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Posted by {event.authorName}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {event.mapLink && (
-              <Button asChild size="sm" variant="outline">
-                <a href={event.mapLink} target="_blank" rel="noopener noreferrer">
-                  <Map className="mr-1 h-4 w-4" />
-                  Map
-                </a>
-              </Button>
-            )}
-            {event.registrationLink && (
-              <Button asChild size="sm">
-                <a href={event.registrationLink} target="_blank" rel="noopener noreferrer">
-                  Register
-                </a>
-              </Button>
-            )}
-             <Button
-              size="sm"
-              variant={isUserAttending ? 'secondary' : 'default'}
-              onClick={handleRsvp}
-              disabled={isLoading || isUserAttending || isUserHost}
-            >
-              {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : isUserHost ? (
-                "You're Hosting"
-              ) : isUserAttending ? (
-                <>
-                  <Check className="mr-2 h-4 w-4" />
-                  You're Going!
-                </>
-              ) : (
-                "I'm Going!"
+    <>
+      <Card className="w-full flex flex-col overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl">
+        <div className="w-full flex flex-col">
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl">{event.title}</CardTitle>
+            <CardDescription className="break-words">{event.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex-grow space-y-4">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Calendar className="mr-2 h-4 w-4" />
+              <span>{format(eventDate, "MMMM d, yyyy 'at' h:mm a")}</span>
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <MapPin className="mr-2 h-4 w-4 shrink-0" />
+              <span>{event.venue}, {event.location}</span>
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Users className="mr-2 h-4 w-4 shrink-0" />
+              <span>{event.attendees || 0} going</span>
+            </div>
+          </CardContent>
+          <CardFooter className="flex-wrap gap-y-4 justify-between items-center">
+            <div className="flex items-center text-sm">
+              <User className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Posted by {event.authorName}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {event.mapLink && (
+                <Button asChild size="sm" variant="outline">
+                  <a href={event.mapLink} target="_blank" rel="noopener noreferrer">
+                    <Map className="mr-1 h-4 w-4" />
+                    Map
+                  </a>
+                </Button>
               )}
-            </Button>
-            <Badge variant="secondary">
-              {format(eventDate, 'MMM d')}
-            </Badge>
-          </div>
-        </CardFooter>
-      </div>
-    </Card>
+              {event.registrationLink && (
+                <Button asChild size="sm">
+                  <a href={event.registrationLink} target="_blank" rel="noopener noreferrer">
+                    Register
+                  </a>
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant={isUserAttending ? 'secondary' : 'default'}
+                onClick={handleRsvp}
+                disabled={isLoading || isUserAttending || isUserHost}
+              >
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : isUserHost ? (
+                  "You're Hosting"
+                ) : isUserAttending ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    You're Going!
+                  </>
+                ) : (
+                  "I'm Going!"
+                )}
+              </Button>
+              <Badge variant="secondary">
+                {format(eventDate, 'MMM d')}
+              </Badge>
+            </div>
+          </CardFooter>
+        </div>
+      </Card>
+      <QrCodeDialog
+        open={isQrDialogOpen}
+        onOpenChange={setIsQrDialogOpen}
+        qrCodeDataUrl={qrCodeDataUrl}
+        eventName={event.title}
+      />
+    </>
   );
 }
