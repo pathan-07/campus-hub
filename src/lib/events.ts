@@ -6,6 +6,8 @@ import {
   query,
   orderBy,
   onSnapshot,
+  runTransaction,
+  doc,
 } from 'firebase/firestore';
 import { app } from './firebase';
 import type { Event, UserProfile } from '@/types';
@@ -13,7 +15,7 @@ import type { Event, UserProfile } from '@/types';
 const db = getFirestore(app);
 const eventsCollection = collection(db, 'events');
 
-type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt'>;
+type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt' | 'attendees' | 'attendeeUids'>;
 
 export async function addEvent(eventData: EventData, user: UserProfile) {
   try {
@@ -22,6 +24,8 @@ export async function addEvent(eventData: EventData, user: UserProfile) {
       authorId: user.uid,
       authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
       createdAt: serverTimestamp(),
+      attendees: 0,
+      attendeeUids: [],
     });
   } catch (error) {
     console.error('Error adding event to Firestore: ', error);
@@ -47,4 +51,61 @@ export function getEventsStream(callback: (events: Event[]) => void) {
   );
 
   return unsubscribe;
+}
+
+export async function registerForEvent(eventId: string, user: UserProfile) {
+  const eventRef = doc(db, 'events', eventId);
+  const userRef = doc(db, 'users', user.uid);
+  const pointsForAttending = 25;
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const eventDoc = await transaction.get(eventRef);
+      const userDoc = await transaction.get(userRef);
+
+      if (!eventDoc.exists()) {
+        throw new Error("Event does not exist!");
+      }
+      if (!userDoc.exists()) {
+        throw new Error("User does not exist!");
+      }
+
+      const eventData = eventDoc.data();
+      const userData = userDoc.data();
+
+      if (eventData.attendeeUids.includes(user.uid)) {
+        // This is now handled silently in the UI, but check remains as a safeguard
+        return;
+      }
+
+      const newAttendeeUids = [...eventData.attendeeUids, user.uid];
+      const newAttendeesCount = eventData.attendees + 1;
+      
+      const newPoints = (userData.points || 0) + pointsForAttending;
+      const newEventsAttended = (userData.eventsAttended || 0) + 1;
+      const newBadges = [...userData.badges];
+
+      if (newEventsAttended === 1 && !newBadges.includes('First RSVP')) {
+        newBadges.push('First RSVP');
+      }
+      if (newEventsAttended === 5 && !newBadges.includes('Socialite')) {
+        newBadges.push('Socialite');
+      }
+
+      transaction.update(eventRef, { 
+        attendeeUids: newAttendeeUids,
+        attendees: newAttendeesCount,
+      });
+
+      transaction.update(userRef, {
+        points: newPoints,
+        eventsAttended: newEventsAttended,
+        badges: newBadges,
+      });
+    });
+  } catch (error) {
+    console.error("Error registering for event: ", error);
+    // Re-throw the error to be handled by the UI
+    throw error;
+  }
 }

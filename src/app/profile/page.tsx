@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, User, Trophy, Star } from 'lucide-react';
+import { Loader2, User, Trophy, Star, CalendarCheck } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { Badge } from '@/components/ui/badge';
 
@@ -209,10 +209,14 @@ export default function ProfilePage() {
                 </CardTitle>
                 <CardDescription>Your engagement and achievements.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-foreground">Points</span>
-                  <span className="text-2xl font-bold text-primary">{user.points}</span>
+                  <span className="font-medium text-foreground">Points</span>
+                  <span className="text-xl font-bold text-primary">{user.points}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-foreground">Events Attended</span>
+                  <span className="text-xl font-bold text-primary">{user.eventsAttended || 0}</span>
                 </div>
               </CardContent>
             </Card>

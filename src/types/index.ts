@@ -12,6 +12,8 @@ export type Event = {
   authorId: string;
   authorName: string;
   createdAt: Timestamp;
+  attendees: number;
+  attendeeUids: string[];
 };
 
 export type UserProfile = {
@@ -22,4 +24,5 @@ export type UserProfile = {
   bio?: string;
   points: number;
   badges: string[];
+  eventsAttended: number;
 };

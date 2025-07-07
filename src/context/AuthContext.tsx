@@ -65,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               bio: firestoreData.bio,
               points: firestoreData.points || 0,
               badges: firestoreData.badges || [],
+              eventsAttended: firestoreData.eventsAttended || 0,
             });
           } else {
             const profileData = {
@@ -73,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               bio: '',
               points: 0,
               badges: [],
+              eventsAttended: 0,
             };
             await setDoc(userRef, profileData);
             setUser({
