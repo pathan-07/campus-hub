@@ -1,3 +1,4 @@
+
 import {
   getFirestore,
   collection,
@@ -9,6 +10,7 @@ import {
   runTransaction,
   doc,
   arrayUnion,
+  getDoc,
 } from 'firebase/firestore';
 import { app } from './firebase';
 import type { Event, UserProfile } from '@/types';
@@ -59,7 +61,7 @@ export function getEventsStream(callback: (events: Event[]) => void) {
 export async function registerForEvent(eventId: string, user: UserProfile) {
   const eventRef = doc(db, 'events', eventId);
   const userRef = doc(db, 'users', user.uid);
-  const pointsForAttending = 25;
+  const pointsForAttending = 5;
 
   try {
     await runTransaction(db, async (transaction) => {
@@ -77,7 +79,6 @@ export async function registerForEvent(eventId: string, user: UserProfile) {
       const userData = userDoc.data();
 
       if (eventData.attendeeUids.includes(user.uid)) {
-        // This is now handled silently in the UI, but check remains as a safeguard
         return;
       }
 
@@ -108,7 +109,6 @@ export async function registerForEvent(eventId: string, user: UserProfile) {
     });
   } catch (error) {
     console.error("Error registering for event: ", error);
-    // Re-throw the error to be handled by the UI
     throw error;
   }
 }
@@ -124,12 +124,10 @@ export async function checkInUser(eventId: string, userId: string) {
 
       const eventData = eventDoc.data();
 
-      // Ensure user has RSVP'd
       if (!eventData.attendeeUids?.includes(userId)) {
         throw new Error('This user has not RSVP\'d for the event.');
       }
       
-      // Ensure user is not already checked in
       if (eventData.checkedInUids?.includes(userId)) {
          throw new Error('This user has already been checked in.');
       }
@@ -163,6 +161,19 @@ export async function sendTicketByEmail(
     });
   } catch (error) {
     console.error('Failed to trigger email sending flow:', error);
-    // We don't want to block the user flow if email fails, so we just log it.
+  }
+}
+
+export async function getEventById(eventId: string): Promise<Event | null> {
+  const eventRef = doc(db, 'events', eventId);
+  try {
+    const docSnap = await getDoc(eventRef);
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Event;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting event by ID:', error);
+    throw new Error('Could not retrieve event data.');
   }
 }

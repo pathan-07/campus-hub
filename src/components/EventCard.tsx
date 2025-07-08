@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -19,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { registerForEvent, sendTicketByEmail } from '@/lib/events';
 import * as QRCode from 'qrcode';
-import { QrCodeDialog } from './QrCodeDialog';
+import Link from 'next/link';
 
 
 interface EventCardProps {
@@ -32,8 +33,6 @@ export function EventCard({ event }: EventCardProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   
   const isCollegeEvent = event.type === 'college';
   const isUserAttending = user && isCollegeEvent ? event.attendeeUids?.includes(user.uid) : false;
@@ -62,17 +61,29 @@ export function EventCard({ event }: EventCardProps) {
       const qrDataString = JSON.stringify(ticketData);
       const dataUrl = await QRCode.toDataURL(qrDataString);
 
-      setQrCodeDataUrl(dataUrl);
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `event-ticket-${event.title.replace(/\s+/g, '-')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
-      // Trigger the email sending flow (fire-and-forget)
       sendTicketByEmail(user, event, dataUrl);
 
       toast({
         title: 'Success!',
-        description: `You're registered for "${event.title}". A ticket has been sent to your email.`,
+        description: `You're registered for "${event.title}". Your ticket is downloading.`,
       });
 
-      setIsQrDialogOpen(true);
+      if (event.registrationLink) {
+        toast({
+          title: 'Redirecting...',
+          description: `You will now be redirected to the registration page.`,
+        });
+        setTimeout(() => {
+          window.open(event.registrationLink, '_blank');
+        }, 2000);
+      }
 
     } catch (error: any) {
       toast({
@@ -125,25 +136,32 @@ export function EventCard({ event }: EventCardProps) {
               )}
 
               {isCollegeEvent ? (
-                <Button
-                  size="sm"
-                  variant={isUserAttending ? 'secondary' : 'default'}
-                  onClick={handleRsvp}
-                  disabled={isLoading || isUserAttending || isUserHost}
-                >
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : isUserHost ? (
-                    "You're Hosting"
-                  ) : isUserAttending ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      You're Going!
-                    </>
-                  ) : (
-                    "I'm Going!"
-                  )}
-                </Button>
+                isUserHost ? (
+                    <Button asChild size="sm" variant="outline">
+                        <Link href={`/events/${event.id}/participants`}>
+                            <Users className="mr-2 h-4 w-4" />
+                            View Participants
+                        </Link>
+                    </Button>
+                ) : (
+                    <Button
+                    size="sm"
+                    variant={isUserAttending ? 'secondary' : 'default'}
+                    onClick={handleRsvp}
+                    disabled={isLoading || isUserAttending}
+                    >
+                    {isLoading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : isUserAttending ? (
+                        <>
+                        <Check className="mr-2 h-4 w-4" />
+                        You're Going!
+                        </>
+                    ) : (
+                        "I'm Going!"
+                    )}
+                    </Button>
+                )
               ) : (
                  event.registrationLink && (
                     <Button asChild size="sm">
@@ -161,12 +179,6 @@ export function EventCard({ event }: EventCardProps) {
           </CardFooter>
         </div>
       </Card>
-      <QrCodeDialog
-        open={isQrDialogOpen}
-        onOpenChange={setIsQrDialogOpen}
-        qrCodeDataUrl={qrCodeDataUrl}
-        eventName={event.title}
-      />
     </>
   );
 }
