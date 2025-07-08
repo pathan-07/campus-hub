@@ -17,7 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import { registerForEvent } from '@/lib/events';
+import { registerForEvent, sendTicketByEmail } from '@/lib/events';
 import * as QRCode from 'qrcode';
 import { QrCodeDialog } from './QrCodeDialog';
 
@@ -52,12 +52,7 @@ export function EventCard({ event }: EventCardProps) {
     setIsLoading(true);
     try {
       await registerForEvent(event.id, user);
-      toast({
-        title: 'Success!',
-        description: `You are now registered for "${event.title}". You earned 25 points!`,
-      });
-
-      // Generate QR Code
+      
       const ticketData = {
         userId: user.uid,
         eventId: event.id,
@@ -68,6 +63,15 @@ export function EventCard({ event }: EventCardProps) {
       const dataUrl = await QRCode.toDataURL(qrDataString);
 
       setQrCodeDataUrl(dataUrl);
+      
+      // Trigger the email sending flow (fire-and-forget)
+      sendTicketByEmail(user, event, dataUrl);
+
+      toast({
+        title: 'Success!',
+        description: `You're registered for "${event.title}". A ticket has been sent to your email.`,
+      });
+
       setIsQrDialogOpen(true);
 
     } catch (error: any) {

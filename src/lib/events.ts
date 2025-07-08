@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { app } from './firebase';
 import type { Event, UserProfile } from '@/types';
+import { sendTicketEmail } from '@/ai/flows/send-ticket-email';
 
 const db = getFirestore(app);
 const eventsCollection = collection(db, 'events');
@@ -140,5 +141,28 @@ export async function checkInUser(eventId: string, userId: string) {
   } catch (error) {
     console.error("Error checking in user: ", error);
     throw error;
+  }
+}
+
+export async function sendTicketByEmail(
+  user: UserProfile,
+  event: Event,
+  qrCodeDataUrl: string
+) {
+  if (!user.email) {
+    console.warn('User does not have an email address to send ticket to.');
+    return;
+  }
+
+  try {
+    await sendTicketEmail({
+      userEmail: user.email,
+      userName: user.displayName || 'Student',
+      eventName: event.title,
+      qrCodeDataUrl: qrCodeDataUrl,
+    });
+  } catch (error) {
+    console.error('Failed to trigger email sending flow:', error);
+    // We don't want to block the user flow if email fails, so we just log it.
   }
 }
