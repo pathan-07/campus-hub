@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
-import { getEventById } from '@/lib/events';
+import { getEventStreamById } from '@/lib/events';
 import { getUsersByUIDs } from '@/lib/users';
 import type { Event, UserProfile } from '@/types';
 import { Header } from '@/components/Header';
@@ -32,38 +32,56 @@ export default function ParticipantsPage() {
       router.push('/login');
       return;
     }
-    if (!eventId) return;
-
-    const fetchData = async () => {
-      try {
-        const eventData = await getEventById(eventId);
-        if (!eventData) {
-          setError('Event not found.');
-          setLoading(false);
-          return;
-        }
-
-        if (eventData.authorId !== user.uid) {
-           setError('You are not authorized to view this page.');
-           setLoading(false);
-           return;
-        }
-
-        setEvent(eventData);
-
-        if (eventData.attendeeUids && eventData.attendeeUids.length > 0) {
-          const participantProfiles = await getUsersByUIDs(eventData.attendeeUids);
-          setParticipants(participantProfiles);
-        }
-      } catch (e: any) {
-        setError(e.message || 'Failed to load participant data.');
-      } finally {
-        setLoading(false);
-      }
+    if (!eventId) {
+      setLoading(false);
+      setError("Event ID is missing.");
+      return;
     };
 
-    fetchData();
-  }, [user, authLoading, eventId, router]);
+    const unsubscribe = getEventStreamById(eventId, async (eventData) => {
+      // This runs every time the event document changes.
+      
+      if (!eventData) {
+        setLoading(false);
+        setError('Event not found.');
+        setEvent(null);
+        setParticipants([]);
+        return;
+      }
+      
+      if (eventData.authorId !== user.uid) {
+        setLoading(false);
+        setError('You are not authorized to view this page.');
+        setEvent(null);
+        setParticipants([]);
+        return;
+      }
+
+      // If we are here, user is authorized and event exists.
+      setError(null);
+      setEvent(eventData);
+
+      // Fetch participants only if the list of UIDs differs from what we already have.
+      const hasAttendees = eventData.attendeeUids && eventData.attendeeUids.length > 0;
+      const localParticipantIds = participants.map(p => p.uid).sort().join(',');
+      const remoteParticipantIds = (eventData.attendeeUids || []).sort().join(',');
+      
+      if (hasAttendees && (localParticipantIds !== remoteParticipantIds)) {
+        try {
+          const participantProfiles = await getUsersByUIDs(eventData.attendeeUids);
+          setParticipants(participantProfiles);
+        } catch (e: any) {
+          setError(e.message || 'Failed to load participant data.');
+        }
+      } else if (!hasAttendees) {
+        setParticipants([]);
+      }
+      
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, authLoading, eventId, router, participants]);
 
   if (authLoading || loading) {
     return (

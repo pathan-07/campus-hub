@@ -177,3 +177,24 @@ export async function getEventById(eventId: string): Promise<Event | null> {
     throw new Error('Could not retrieve event data.');
   }
 }
+
+export function getEventStreamById(eventId: string, callback: (event: Event | null) => void) {
+  const eventRef = doc(db, 'events', eventId);
+
+  const unsubscribe = onSnapshot(
+    eventRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        callback({ id: docSnap.id, ...docSnap.data() } as Event);
+      } else {
+        callback(null);
+      }
+    },
+    (error) => {
+      console.error(`Error getting real-time event data for ${eventId}:`, error);
+      callback(null);
+    }
+  );
+
+  return unsubscribe;
+}
