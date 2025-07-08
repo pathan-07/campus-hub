@@ -18,6 +18,7 @@ export function getUsersStream(callback: (users: UserProfile[]) => void) {
     q,
     (querySnapshot) => {
       const users = querySnapshot.docs.map((doc) => ({
+        uid: doc.id,
         ...doc.data(),
       })) as UserProfile[];
       callback(users);
