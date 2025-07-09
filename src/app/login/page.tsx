@@ -22,26 +22,39 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
-  const { login, signup } = useAuth();
+  const { login, signup, signInWithGoogle } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleError = (error: any, context: 'user' | 'guest') => {
-    const title = context === 'guest' ? 'Guest Login' : 'Authentication';
+  const handleError = (error: any, context: 'user' | 'guest' | 'google') => {
+    let title = 'Authentication';
+    if (context === 'guest') title = 'Guest Login';
+    if (context === 'google') title = 'Google Sign-In';
+
+    if (error.code === 'auth/popup-closed-by-user') {
+      toast({
+        variant: 'destructive',
+        title: `${title} Cancelled`,
+        description: 'The sign-in window was closed. Please try again.',
+      });
+      return;
+    }
+
     if (error.code === 'auth/operation-not-allowed') {
       toast({
         variant: 'destructive',
         title: `${title} Disabled`,
         description:
-          'Email/Password sign-in is not enabled. Please enable it in the Firebase console.',
+          'This sign-in method is not enabled in the project configuration.',
       });
-    } else {
-      toast({
-        variant: 'destructive',
-        title: `${title} Error`,
-        description: error.message,
-      });
+      return;
     }
+
+    toast({
+      variant: 'destructive',
+      title: `${title} Error`,
+      description: error.message,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,6 +74,19 @@ export default function LoginPage() {
       router.push('/');
     } catch (error: any) {
       handleError(error, 'user');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      toast({
+        title: 'Success',
+        description: 'Logged in with Google successfully.',
+      });
+      router.push('/');
+    } catch (error: any) {
+      handleError(error, 'google');
     }
   };
 
@@ -135,13 +161,14 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col">
-            <Button type="submit" className="w-full">
+             <Button type="submit" className="w-full mt-2">
               {isLogin ? 'Sign In' : 'Sign Up'}
             </Button>
-            
-            <div className="relative my-4 w-full">
+          </CardContent>
+        </form>
+         
+        <div className="px-6 pb-6">
+            <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
@@ -152,22 +179,30 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Button variant="outline" className="w-full" onClick={handleGuestLogin} type="button">
-              Sign in as Guest
-            </Button>
+            <div className="grid grid-cols-1 gap-2">
+                 <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} type="button">
+                    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="mr-2 h-4 w-4">
+                      <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.02-2.3 1.62-3.92 1.62-3.15 0-5.73-2.52-5.73-5.65s2.58-5.65 5.73-5.65c1.73 0 2.95.78 3.65 1.45l2.65-2.65C16.55 3.5 14.7 2.5 12.48 2.5c-4.4 0-8.25 3.55-8.25 7.9s3.85 7.9 8.25 7.9c2.35 0 4.25-.8 5.65-2.25 1.45-1.45 2.1-3.6 2.1-6.05 0-.6-.05-1.15-.15-1.7H12.48z"/>
+                    </svg>
+                    Sign in with Google
+                </Button>
+                <Button variant="outline" className="w-full" onClick={handleGuestLogin} type="button">
+                  Sign in as Guest
+                </Button>
+            </div>
+            
 
             <Button
               type="button"
               variant="link"
-              className="mt-4"
+              className="mt-4 w-full"
               onClick={() => setIsLogin(!isLogin)}
             >
               {isLogin
                 ? "Don't have an account? Sign up"
                 : 'Already have an account? Sign in'}
             </Button>
-          </CardFooter>
-        </form>
+        </div>
       </Card>
     </div>
   );

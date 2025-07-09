@@ -15,6 +15,8 @@ import {
   signOut,
   updateProfile as updateAuthProfile,
   type User as FirebaseUser,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -33,6 +35,7 @@ interface AuthContextType {
   signup: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<void>;
   updateUserProfile: (updates: { displayName: string; bio: string; photoFile?: File | null }) => Promise<void>;
+  signInWithGoogle: () => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -42,6 +45,7 @@ const AuthContext = createContext<AuthContextType>({
   signup: async () => {},
   logout: async () => {},
   updateUserProfile: async () => {},
+  signInWithGoogle: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -71,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const profileData = {
               displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
               photoURL: firebaseUser.photoURL || null,
+              email: firebaseUser.email,
               bio: '',
               points: 0,
               badges: [],
@@ -79,7 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await setDoc(userRef, profileData);
             setUser({
               uid: firebaseUser.uid,
-              email: firebaseUser.email,
               ...profileData,
             });
           }
@@ -107,6 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await signOut(auth);
     router.push('/login');
+  };
+
+  const signInWithGoogle = () => {
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider);
   };
 
   const updateUserProfile = async (updates: { displayName: string; bio: string; photoFile?: File | null }) => {
@@ -144,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signup,
     logout,
     updateUserProfile,
+    signInWithGoogle,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
