@@ -39,6 +39,16 @@ export default function LoginPage() {
       });
       return;
     }
+    
+    if (error.code === 'auth/unauthorized-domain') {
+      toast({
+        variant: 'destructive',
+        title: 'Domain Not Authorized',
+        description:
+          'This domain is not authorized for Google Sign-In. Please check your Firebase project settings.',
+      });
+      return;
+    }
 
     if (error.code === 'auth/operation-not-allowed') {
       toast({
