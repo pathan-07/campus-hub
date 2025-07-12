@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -24,6 +25,7 @@ import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import type { UserProfile } from '@/types';
 
+// These are initialized inside the provider to ensure they run client-side.
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
