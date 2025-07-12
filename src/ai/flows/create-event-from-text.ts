@@ -19,11 +19,11 @@ export type CreateEventFromTextInput = z.infer<typeof CreateEventFromTextInputSc
 const EventDataSchema = z.object({
     title: z.string(),
     description: z.string(),
-    venue: z.string().describe("The specific venue or address of the event."),
-    location: z.string().describe("The city where the event is taking place."),
+    venue: z.string(),
+    location: z.string(),
     date: z.string(),
     type: z.enum(['college', 'other']).describe("The type of event. If the event seems to be a student or campus-related event, classify it as 'college'. Otherwise, classify it as 'other'."),
-    mapLink: z.string().url().optional().describe("A Google Maps URL for the event location, if provided in the text."),
+    mapLink: z.string().url().optional(),
     registrationLink: z.string().optional(),
 });
 export type EventData = z.infer<typeof EventDataSchema>;
