@@ -16,20 +16,14 @@ import {
 import { app } from './firebase';
 import type { Event, UserProfile } from '@/types';
 import { sendTicketEmail } from '@/ai/flows/send-ticket-email';
-import { generateEventImage } from '@/ai/flows/generate-event-image';
 
 const db = getFirestore(app);
 const eventsCollection = collection(db, 'events');
 
-type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt' | 'attendees' | 'attendeeUids' | 'checkedInUids' | 'imageUrl'>;
+type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt' | 'attendees' | 'attendeeUids' | 'checkedInUids'>;
 
 export async function addEvent(eventData: EventData, user: UserProfile) {
   try {
-    const imageUrl = await generateEventImage({
-      title: eventData.title,
-      description: eventData.description,
-    });
-    
     await addDoc(eventsCollection, {
       ...eventData,
       authorId: user.uid,
@@ -38,7 +32,6 @@ export async function addEvent(eventData: EventData, user: UserProfile) {
       attendees: 0,
       attendeeUids: [],
       checkedInUids: [],
-      imageUrl: imageUrl ?? null,
     });
   } catch (error) {
     console.error('Error adding event to Firestore: ', error);
