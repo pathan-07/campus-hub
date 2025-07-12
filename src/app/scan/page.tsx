@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
@@ -27,6 +27,7 @@ export default function ScanPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [scannedData, setScannedData] = useState<ScannedData | null>(null);
@@ -41,30 +42,43 @@ export default function ScanPage() {
     }
   }, [user, loading, router]);
 
-  // Request camera permission
-  useEffect(() => {
-    const getCameraPermission = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setHasCameraPermission(true);
-        setIsScanning(true);
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        setHasCameraPermission(false);
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      if(videoRef.current) {
+        videoRef.current.srcObject = null;
       }
-    };
+    }
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    stopCamera(); // Stop any existing stream
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setHasCameraPermission(true);
+      setIsScanning(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setHasCameraPermission(false);
+      setIsScanning(false);
+    }
+  }, [stopCamera]);
+
+
+  useEffect(() => {
     if (user) {
-       getCameraPermission();
+       startCamera();
     }
      return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
-      }
+      stopCamera();
     };
-  }, [user]);
+  }, [user, startCamera, stopCamera]);
+
 
   // QR Code Scanning Loop
   useEffect(() => {
@@ -95,9 +109,7 @@ export default function ScanPage() {
             if (data.userId && data.eventId && data.userName && data.userEmail) {
                 setScannedData(data);
                 setIsScanning(false);
-                 if (videoRef.current && videoRef.current.srcObject) {
-                    (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
-                }
+                stopCamera();
             }
           } catch (e) {
             // Not a valid JSON QR code for our app, just ignore
@@ -112,7 +124,7 @@ export default function ScanPage() {
     }
 
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isScanning]);
+  }, [isScanning, stopCamera]);
 
 
   const handleCheckIn = async () => {
@@ -143,20 +155,7 @@ export default function ScanPage() {
   const handleScanAgain = () => {
     setScannedData(null);
     setScanResult(null);
-    if(videoRef.current && !videoRef.current.srcObject) {
-         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(stream => {
-                 if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    setIsScanning(true);
-                }
-            }).catch(err => {
-                 console.error("Failed to re-acquire camera", err);
-                 setHasCameraPermission(false);
-            })
-    } else {
-        setIsScanning(true);
-    }
+    startCamera();
   }
 
   if (loading || !user) {
@@ -192,7 +191,7 @@ export default function ScanPage() {
                 </Alert>
             )}
 
-            {hasCameraPermission && (
+            {hasCameraPermission !== null && (
               <div className="relative w-full aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
                 <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
                 <canvas ref={canvasRef} className="hidden" />
