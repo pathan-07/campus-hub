@@ -21,16 +21,16 @@ const EventSchema = z.object({
 });
 
 const AnalyzeEventsInputSchema = z.object({
-  events: z.array(EventSchema).describe('A list of all campus events.'),
+  events: z.array(EventSchema),
 });
 export type AnalyzeEventsInput = z.infer<typeof AnalyzeEventsInputSchema>;
 
 const AnalyzeEventsOutputSchema = z.object({
-  summary: z.string().describe('A 2-3 sentence qualitative summary of the event trends, like popular locations or types of events.'),
+  summary: z.string(),
   eventsByLocation: z.array(z.object({
-    location: z.string().describe('The name of the location.'),
-    count: z.number().describe('The number of events held at this location.'),
-  })).describe('A list of locations and the number of events at each.'),
+    location: z.string(),
+    count: z.number(),
+  })),
 });
 export type AnalyzeEventsOutput = z.infer<typeof AnalyzeEventsOutputSchema>;
 

@@ -22,8 +22,8 @@ const EventDataSchema = z.object({
     venue: z.string(),
     location: z.string(),
     date: z.string(),
-    type: z.enum(['college', 'other']).describe("The type of event. If the event seems to be a student or campus-related event, classify it as 'college'. Otherwise, classify it as 'other'."),
-    mapLink: z.string().url().optional(),
+    type: z.enum(['college', 'other']),
+    mapLink: z.string().optional(),
     registrationLink: z.string().optional(),
 });
 export type EventData = z.infer<typeof EventDataSchema>;

@@ -22,13 +22,13 @@ const EventSchema = z.object({
 });
 
 const AnswerCampusResourceQuestionInputSchema = z.object({
-  question: z.string().describe('The question about campus resources.'),
-  events: z.array(EventSchema).optional().describe('A list of current campus events.'),
+  question: z.string(),
+  events: z.array(EventSchema).optional(),
 });
 export type AnswerCampusResourceQuestionInput = z.infer<typeof AnswerCampusResourceQuestionInputSchema>;
 
 const AnswerCampusResourceQuestionOutputSchema = z.object({
-  answer: z.string().describe('The answer to the question about campus resources.'),
+  answer: z.string(),
 });
 export type AnswerCampusResourceQuestionOutput = z.infer<typeof AnswerCampusResourceQuestionOutputSchema>;
 
