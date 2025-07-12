@@ -72,6 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               eventsAttended: firestoreData.eventsAttended || 0,
             });
           } else {
+            // This logic runs if the user exists in Firebase Auth but not in Firestore.
+            // It's perfect for creating a profile for new Google Sign-In users.
             const profileData = {
               displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
               photoURL: firebaseUser.photoURL || null,
