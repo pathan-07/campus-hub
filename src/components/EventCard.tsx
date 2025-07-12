@@ -21,6 +21,7 @@ import { useState } from 'react';
 import { registerForEvent, sendTicketByEmail } from '@/lib/events';
 import * as QRCode from 'qrcode';
 import Link from 'next/link';
+import Image from 'next/image';
 
 
 interface EventCardProps {
@@ -98,8 +99,18 @@ export function EventCard({ event }: EventCardProps) {
 
   return (
     <>
-      <Card className="w-full flex flex-col overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl">
-        <div className="w-full flex flex-col">
+      <Card className="w-full flex flex-col md:flex-row overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-xl">
+        <div className="md:w-1/3">
+           <Image
+              src={event.imageUrl || 'https://placehold.co/600x400.png'}
+              alt={event.title}
+              width={600}
+              height={400}
+              data-ai-hint="event photo"
+              className="object-cover w-full h-48 md:h-full"
+            />
+        </div>
+        <div className="w-full md:w-2/3 flex flex-col">
           <CardHeader>
             <CardTitle className="font-headline text-2xl">{event.title}</CardTitle>
             <CardDescription className="break-words">{event.description}</CardDescription>

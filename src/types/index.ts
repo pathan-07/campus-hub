@@ -10,6 +10,7 @@ export type Event = {
   type: 'college' | 'other';
   mapLink?: string;
   registrationLink?: string;
+  imageUrl?: string;
   authorId: string;
   authorName: string;
   createdAt: Timestamp;

@@ -1,6 +1,6 @@
 
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import { getEventStreamById } from '@/lib/events';
@@ -25,6 +25,17 @@ export default function ParticipantsPage() {
   const [participants, setParticipants] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const participantIdsRef = useRef<string>('');
+
+  const fetchParticipantProfiles = useCallback(async (uids: string[]) => {
+      try {
+        const participantProfiles = await getUsersByUIDs(uids);
+        setParticipants(participantProfiles);
+      } catch (e: any) {
+        setError(e.message || 'Failed to load participant data.');
+      }
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -39,10 +50,9 @@ export default function ParticipantsPage() {
     };
 
     const unsubscribe = getEventStreamById(eventId, async (eventData) => {
-      // This runs every time the event document changes.
+      if (loading) setLoading(false);
       
       if (!eventData) {
-        setLoading(false);
         setError('Event not found.');
         setEvent(null);
         setParticipants([]);
@@ -50,38 +60,28 @@ export default function ParticipantsPage() {
       }
       
       if (eventData.authorId !== user.uid) {
-        setLoading(false);
         setError('You are not authorized to view this page.');
         setEvent(null);
         setParticipants([]);
         return;
       }
 
-      // If we are here, user is authorized and event exists.
       setError(null);
       setEvent(eventData);
 
-      // Fetch participants only if the list of UIDs differs from what we already have.
       const hasAttendees = eventData.attendeeUids && eventData.attendeeUids.length > 0;
-      const localParticipantIds = participants.map(p => p.uid).sort().join(',');
       const remoteParticipantIds = (eventData.attendeeUids || []).sort().join(',');
-      
-      if (hasAttendees && (localParticipantIds !== remoteParticipantIds)) {
-        try {
-          const participantProfiles = await getUsersByUIDs(eventData.attendeeUids);
-          setParticipants(participantProfiles);
-        } catch (e: any) {
-          setError(e.message || 'Failed to load participant data.');
-        }
+
+      if (hasAttendees && (participantIdsRef.current !== remoteParticipantIds)) {
+        participantIdsRef.current = remoteParticipantIds;
+        fetchParticipantProfiles(eventData.attendeeUids);
       } else if (!hasAttendees) {
         setParticipants([]);
       }
-      
-      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user, authLoading, eventId, router, participants]);
+  }, [user, authLoading, eventId, router, fetchParticipantProfiles, loading]);
 
   if (authLoading || loading) {
     return (
