@@ -8,6 +8,7 @@ export type Event = {
   location: string;
   date: string; // ISO string
   type: 'college' | 'other';
+  category: 'Tech' | 'Sports' | 'Music' | 'Workshop' | 'Social' | 'Other';
   mapLink?: string;
   registrationLink?: string;
   authorId: string;
@@ -27,4 +28,13 @@ export type UserProfile = {
   points: number;
   badges: string[];
   eventsAttended: number;
+};
+
+export type Comment = {
+  id: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+  authorPhotoURL?: string;
+  createdAt: Timestamp;
 };

@@ -1,4 +1,3 @@
-
 import {
   getFirestore,
   collection,
@@ -12,6 +11,9 @@ import {
   arrayUnion,
   getDoc,
   updateDoc,
+  where,
+  getDocs,
+  Timestamp
 } from 'firebase/firestore';
 import { app } from './firebase';
 import type { Event, UserProfile } from '@/types';
@@ -198,4 +200,27 @@ export function getEventStreamById(eventId: string, callback: (event: Event | nu
   );
 
   return unsubscribe;
+}
+
+export async function getEventsForUser(userId: string): Promise<Event[]> {
+  const q = query(eventsCollection, where('attendeeUids', 'array-contains', userId), orderBy('date', 'desc'));
+  try {
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
+  } catch (error) {
+    console.error("Error fetching user's events: ", error);
+    return [];
+  }
+}
+
+export async function getUpcomingEvents(): Promise<Event[]> {
+  const now = Timestamp.now();
+  const q = query(eventsCollection, where('date', '>=', now.toDate().toISOString()), orderBy('date', 'asc'));
+  try {
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Event));
+  } catch (error) {
+    console.error("Error fetching upcoming events: ", error);
+    return [];
+  }
 }

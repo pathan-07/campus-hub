@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -12,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { Event } from '@/types';
 import { format } from 'date-fns';
-import { Calendar, MapPin, User, Map, Users, Loader2, Check } from 'lucide-react';
+import { Calendar, MapPin, User, Map, Users, Loader2, Check, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -98,7 +97,10 @@ export function EventCard({ event }: EventCardProps) {
   return (
     <Card className="w-full flex flex-col overflow-hidden transition-shadow duration-300 ease-in-out hover:shadow-xl">
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">{event.title}</CardTitle>
+        <div className="flex justify-between items-start">
+            <CardTitle className="font-headline text-2xl">{event.title}</CardTitle>
+            <Badge variant="outline" className="shrink-0">{event.category}</Badge>
+        </div>
         <CardDescription className="break-words pt-2">{event.description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
@@ -123,6 +125,12 @@ export function EventCard({ event }: EventCardProps) {
           <span className="text-muted-foreground">Posted by {event.authorName}</span>
         </div>
         <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/events/${event.id}`}>
+                <MessageSquare className="mr-1 h-4 w-4" />
+                Discuss
+              </Link>
+            </Button>
           {event.mapLink && (
             <Button asChild size="sm" variant="outline">
               <a href={event.mapLink} target="_blank" rel="noopener noreferrer">

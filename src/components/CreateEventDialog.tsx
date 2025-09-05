@@ -25,6 +25,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { gujaratCities } from '@/lib/locations';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
+const eventCategories = ['Tech', 'Sports', 'Music', 'Workshop', 'Social', 'Other'] as const;
+
 const eventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters long'),
   description: z.string().min(10, 'Description must be at least 10 characters long'),
@@ -34,6 +36,7 @@ const eventSchema = z.object({
     message: 'Invalid date format',
   }),
   type: z.enum(['college', 'other'], { required_error: 'You must select an event type.' }),
+  category: z.enum(eventCategories, { required_error: 'You must select a category.' }),
   mapLink: z.string().url({ message: "Please enter a valid Google Maps URL." }).optional().or(z.literal('')),
   registrationLink: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
@@ -68,6 +71,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
       location: '',
       venue: '',
       type: 'college',
+      category: 'Other',
     },
   });
 
@@ -93,6 +97,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
       setValue('location', result.location);
       setValue('date', result.date);
       setValue('type', result.type);
+      setValue('category', result.category);
       setValue('mapLink', result.mapLink || '');
       setValue('registrationLink', result.registrationLink || '');
 
@@ -259,38 +264,66 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
                     <Textarea id="description" {...register('description')} />
                     {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="venue">Venue</Label>
-                    <Input id="venue" {...register('venue')} placeholder="e.g., Mahatma Mandir" />
-                    {errors.venue && <p className="text-sm text-destructive">{errors.venue.message}</p>}
+                   <div className="grid grid-cols-2 gap-4">
+                     <div className="grid gap-2">
+                        <Label htmlFor="category">Category</Label>
+                         <Controller
+                          name="category"
+                          control={control}
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger id="category">
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {eventCategories.map((cat) => (
+                                  <SelectItem key={cat} value={cat}>
+                                    {cat}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="date">Date and Time</Label>
+                        <Input id="date" type="datetime-local" {...register('date')} />
+                        {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
+                      </div>
+                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="venue">Venue</Label>
+                        <Input id="venue" {...register('venue')} placeholder="e.g., Mahatma Mandir" />
+                        {errors.venue && <p className="text-sm text-destructive">{errors.venue.message}</p>}
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="location">City</Label>
+                         <Controller
+                          name="location"
+                          control={control}
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger id="location">
+                                <SelectValue placeholder="Select a city" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {gujaratCities.map((city) => (
+                                  <SelectItem key={city} value={city}>
+                                    {city}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        {errors.location && <p className="text-sm text-destructive">{errors.location.message}</p>}
+                      </div>
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="location">City</Label>
-                     <Controller
-                      name="location"
-                      control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger id="location">
-                            <SelectValue placeholder="Select a city" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gujaratCities.map((city) => (
-                              <SelectItem key={city} value={city}>
-                                {city}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.location && <p className="text-sm text-destructive">{errors.location.message}</p>}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="date">Date and Time</Label>
-                    <Input id="date" type="datetime-local" {...register('date')} />
-                    {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
-                  </div>
+                 
+                  
                   <div className="grid gap-2">
                     <Label htmlFor="registrationLink">Registration Link (optional)</Label>
                     <Input id="registrationLink" type="url" placeholder="https://example.com/register" {...register('registrationLink')} />

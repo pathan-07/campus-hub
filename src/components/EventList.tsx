@@ -15,11 +15,14 @@ import {
 import { Label } from '@/components/ui/label';
 import { gujaratCities } from '@/lib/locations';
 
+const eventCategories = ['all', 'Tech', 'Sports', 'Music', 'Workshop', 'Social', 'Other'] as const;
+
 export function EventList() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('upcoming');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   useEffect(() => {
     const unsubscribe = getEventsStream((newEvents) => {
@@ -47,9 +50,12 @@ export function EventList() {
       const locationMatch =
         locationFilter === 'all' || event.location === locationFilter;
 
-      return statusMatch && locationMatch;
+      const categoryMatch =
+        categoryFilter === 'all' || event.category === categoryFilter;
+
+      return statusMatch && locationMatch && categoryMatch;
     });
-  }, [events, statusFilter, locationFilter]);
+  }, [events, statusFilter, locationFilter, categoryFilter]);
 
   if (loading) {
     return (
@@ -73,7 +79,7 @@ export function EventList() {
         <div className="grid gap-2 flex-1">
           <Label htmlFor="status-filter">Event Status</Label>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger id="status-filter" className="w-full sm:w-[180px]">
+            <SelectTrigger id="status-filter">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -89,13 +95,31 @@ export function EventList() {
             value={locationFilter}
             onValueChange={setLocationFilter}
           >
-            <SelectTrigger id="location-filter" className="w-full sm:w-[180px]">
+            <SelectTrigger id="location-filter">
               <SelectValue placeholder="Filter by location" />
             </SelectTrigger>
             <SelectContent>
               {locations.map((location) => (
                 <SelectItem key={location} value={location}>
                   {location === 'all' ? 'All Locations' : location}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-2 flex-1">
+          <Label htmlFor="category-filter">Category</Label>
+          <Select
+            value={categoryFilter}
+            onValueChange={setCategoryFilter}
+          >
+            <SelectTrigger id="category-filter">
+              <SelectValue placeholder="Filter by category" />
+            </SelectTrigger>
+            <SelectContent>
+              {eventCategories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat === 'all' ? 'All Categories' : cat}
                 </SelectItem>
               ))}
             </SelectContent>

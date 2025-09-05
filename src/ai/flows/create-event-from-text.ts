@@ -11,8 +11,8 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const CreateEventFromTextInputSchema = z.object({
-  text: z.string().describe('The natural language description of the event.'),
-  currentDate: z.string().describe("The current date in ISO format, to help resolve relative dates like 'tomorrow' or 'next Friday'."),
+  text: z.string(),
+  currentDate: z.string(),
 });
 export type CreateEventFromTextInput = z.infer<typeof CreateEventFromTextInputSchema>;
 
@@ -23,6 +23,7 @@ const EventDataSchema = z.object({
     location: z.string(),
     date: z.string(),
     type: z.enum(['college', 'other']),
+    category: z.enum(['Tech', 'Sports', 'Music', 'Workshop', 'Social', 'Other']),
     mapLink: z.string().optional(),
     registrationLink: z.string().optional(),
 });
@@ -40,9 +41,19 @@ const createEventPrompt = ai.definePrompt({
 
 Today's date is {{currentDate}}. Use this to correctly interpret relative dates (e.g., "tomorrow", "next Friday").
 
-From the following text, extract the event's title, a detailed description, the specific venue (e.g., "Library Room 4B", "Grand Hall"), the city (location), the full date and time, a Google Maps link if provided, a registration link if provided, and the event type.
+From the following text, extract the event's title, a detailed description, the specific venue (e.g., "Library Room 4B", "Grand Hall"), the city (location), the full date and time, a Google Maps link if provided, a registration link if provided, the event type, and the event category.
 
-If the event sounds like it's specifically for college students or happening on a campus (e.g., study sessions, club meetings, campus fairs), classify its type as 'college'. For all other events (e.g., general public concerts, city-wide festivals), classify the type as 'other'.
+Event Type Rules:
+- If the event sounds like it's specifically for college students or happening on a campus (e.g., study sessions, club meetings, campus fairs), classify its type as 'college'.
+- For all other events (e.g., general public concerts, city-wide festivals), classify the type as 'other'.
+
+Event Category Rules:
+- 'Tech': For coding workshops, hackathons, AI talks, etc.
+- 'Sports': For games, matches, or athletic activities.
+- 'Music': For concerts, open mics, or band performances.
+- 'Workshop': For educational or skill-building sessions (that are not tech).
+- 'Social': For mixers, parties, festivals, or meet-and-greets.
+- 'Other': If it doesn't fit any of the above.
 
 The output for the 'date' field MUST be in a format compatible with an HTML datetime-local input, which is 'YYYY-MM-DDTHH:mm'.
 
