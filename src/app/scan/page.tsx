@@ -8,7 +8,7 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, QrCode, User, ScanLine, XCircle, CheckCircle } from 'lucide-react';
+import { Loader2, QrCode, User, ScanLine, XCircle, CheckCircle, Camera } from 'lucide-react';
 import jsQR from 'jsqr';
 import { checkInUser } from '@/lib/events';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -34,6 +34,7 @@ export default function ScanPage() {
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [scanResult, setScanResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [cameraStarted, setCameraStarted] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -49,35 +50,37 @@ export default function ScanPage() {
       if(videoRef.current) {
         videoRef.current.srcObject = null;
       }
+      setIsScanning(false);
+      setCameraStarted(false);
     }
   }, []);
 
   const startCamera = useCallback(async () => {
-    stopCamera(); // Stop any existing stream
+    if (streamRef.current) stopCamera();
+    
+    setCameraStarted(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // The oncanplay event will set isScanning to true
       }
       setHasCameraPermission(true);
-      setIsScanning(true);
     } catch (error) {
       console.error('Error accessing camera:', error);
       setHasCameraPermission(false);
       setIsScanning(false);
+      setCameraStarted(false);
     }
   }, [stopCamera]);
 
 
   useEffect(() => {
-    if (user) {
-       startCamera();
-    }
      return () => {
       stopCamera();
     };
-  }, [user, startCamera, stopCamera]);
+  }, [stopCamera]);
 
 
   // QR Code Scanning Loop
@@ -191,46 +194,61 @@ export default function ScanPage() {
                 </Alert>
             )}
 
-            {hasCameraPermission !== null && (
-              <div className="relative w-full aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
-                <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-                <canvas ref={canvasRef} className="hidden" />
-                {isScanning && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
-                        <ScanLine className="h-24 w-24 text-white/80 animate-pulse" />
-                        <p className="text-white font-bold mt-4">Point at a QR code</p>
-                    </div>
-                )}
-                 {scannedData && !scanResult && (
-                     <div className="absolute inset-0 p-6 bg-background/90 flex flex-col items-center justify-center text-center">
-                        <User className="h-16 w-16 text-primary" />
-                        <h3 className="text-xl font-bold mt-4">{scannedData.userName}</h3>
-                        <p className="text-muted-foreground">{scannedData.userEmail}</p>
-                     </div>
-                 )}
-                 {scanResult && (
-                     <div className={`absolute inset-0 p-6 bg-background/90 flex flex-col items-center justify-center text-center`}>
-                        {scanResult.type === 'success' ? (
-                            <CheckCircle className="h-16 w-16 text-green-500" />
-                        ) : (
-                            <XCircle className="h-16 w-16 text-destructive" />
-                        )}
-                        <h3 className="text-xl font-bold mt-4">
-                            {scanResult.type === 'success' ? 'Check-in Complete' : 'Check-in Failed'}
-                        </h3>
-                        <p className="text-muted-foreground">{scanResult.message}</p>
-                     </div>
-                 )}
-              </div>
-            )}
+            <div className="relative w-full aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
+              <video ref={videoRef} className={`w-full h-full object-cover ${!cameraStarted && 'hidden'}`} autoPlay playsInline muted onCanPlay={() => setIsScanning(true)} />
+              <canvas ref={canvasRef} className="hidden" />
+
+              {!cameraStarted && hasCameraPermission !== false && (
+                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                    <Camera className="h-16 w-16 text-muted-foreground mb-4"/>
+                    <h3 className="font-bold text-lg">Ready to Scan</h3>
+                    <p className="text-muted-foreground text-sm">Press the button below to start the camera.</p>
+                 </div>
+              )}
+              
+              {isScanning && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
+                      <ScanLine className="h-24 w-24 text-white/80 animate-pulse" />
+                      <p className="text-white font-bold mt-4">Point at a QR code</p>
+                  </div>
+              )}
+               {scannedData && !scanResult && (
+                   <div className="absolute inset-0 p-6 bg-background/90 flex flex-col items-center justify-center text-center">
+                      <User className="h-16 w-16 text-primary" />
+                      <h3 className="text-xl font-bold mt-4">{scannedData.userName}</h3>
+                      <p className="text-muted-foreground">{scannedData.userEmail}</p>
+                   </div>
+               )}
+               {scanResult && (
+                   <div className={`absolute inset-0 p-6 bg-background/90 flex flex-col items-center justify-center text-center`}>
+                      {scanResult.type === 'success' ? (
+                          <CheckCircle className="h-16 w-16 text-green-500" />
+                      ) : (
+                          <XCircle className="h-16 w-16 text-destructive" />
+                      )}
+                      <h3 className="text-xl font-bold mt-4">
+                          {scanResult.type === 'success' ? 'Check-in Complete' : 'Check-in Failed'}
+                      </h3>
+                      <p className="text-muted-foreground">{scanResult.message}</p>
+                   </div>
+               )}
+            </div>
             
           </CardContent>
            <CardFooter className="flex flex-col gap-2">
-            {!scannedData && hasCameraPermission && (
-              <Button className="w-full" disabled>
-                Scanning...
+            {!cameraStarted && !scanResult ? (
+              <Button className="w-full" onClick={startCamera}>
+                <Camera className="mr-2 h-4 w-4" />
+                Start Scanner
+              </Button>
+            ) : null}
+
+            {isScanning && (
+              <Button className="w-full" onClick={stopCamera} variant="outline">
+                Stop Scanner
               </Button>
             )}
+
              {scannedData && !scanResult && (
                <>
                  <Button className="w-full" onClick={handleCheckIn} disabled={isCheckingIn}>
