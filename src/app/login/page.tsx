@@ -45,7 +45,7 @@ export default function LoginPage() {
         variant: 'destructive',
         title: 'Domain Not Authorized',
         description:
-          'This domain is not authorized for Google Sign-In. Please check your Firebase project settings.',
+          'This domain is not authorized for Google Sign-In. Please check your Supabase project settings.',
       });
       return;
     }

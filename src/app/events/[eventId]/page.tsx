@@ -18,12 +18,12 @@ import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function EventComment({ comment }: { comment: Comment }) {
-  const commentDate = comment.createdAt?.toDate ? comment.createdAt.toDate() : new Date();
+  const commentDate = comment.createdAt ? new Date(comment.createdAt) : new Date();
   
   return (
     <div className="flex items-start gap-4">
       <Avatar className="h-10 w-10">
-        <AvatarImage src={comment.authorPhotoURL} />
+  <AvatarImage src={comment.authorPhotoURL ?? undefined} />
         <AvatarFallback>{comment.authorName?.[0] ?? 'U'}</AvatarFallback>
       </Avatar>
       <div className="flex-1">

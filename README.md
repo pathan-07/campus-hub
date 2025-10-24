@@ -1,11 +1,11 @@
-# Campus Hub - A Next.js, Firebase, and Genkit Application
+# Campus Hub - A Next.js, Supabase, and Genkit Application
 
-This is a Next.js application built with Firebase for backend services (Authentication, Firestore) and Genkit for AI-powered features. This guide provides instructions on how to set up, run, and deploy the project to Vercel.
+This is a Next.js application built with Supabase for backend services (Authentication, Database, Storage, Realtime) and Genkit for AI-powered features. This guide provides instructions on how to set up, run, and deploy the project to Vercel.
 
 ## Features
 
 - **Event Management:** Create, view, and filter upcoming and past events.
-- **User Authentication:** Sign up, log in (email/password, Google, guest), and manage user profiles.
+- **User Authentication:** Sign up, log in (email/password, Google, guest), and manage user profiles via Supabase Auth.
 - **AI-Powered Features:**
   - Generate event details from a simple text description.
   - Chatbot to answer questions about campus events and resources.
@@ -17,7 +17,7 @@ This is a Next.js application built with Firebase for backend services (Authenti
 
 - **Framework:** Next.js (with App Router)
 - **UI:** React, ShadCN UI, Tailwind CSS
-- **Backend & Database:** Firebase (Authentication, Firestore, Storage)
+- **Backend & Database:** Supabase (Authentication, Database, Storage, Realtime)
 - **Generative AI:** Google AI via Genkit
 - **Deployment:** Vercel
 
@@ -29,29 +29,25 @@ This is a Next.js application built with Firebase for backend services (Authenti
 
 - [Node.js](https://nodejs.org/) (v18 or later)
 - [Vercel CLI](https://vercel.com/docs/cli)
-- A Firebase project with Authentication, Firestore, and Storage enabled.
+- A Supabase project with Auth, Database, Storage, and Realtime enabled.
 - A Google Cloud project with the "AI Platform" API enabled to get a `GOOGLE_API_KEY` for Genkit.
 
 ### 2. Set Up Environment Variables
 
-This project requires several environment variables to connect to Firebase and Google AI services.
+This project requires several environment variables to connect to Supabase and Google AI services.
 
 Create a `.env.local` file in the root of your project and add the following variables. Replace the placeholder values with your actual project credentials.
 
 ```env
-# Firebase Configuration
-NEXT_PUBLIC_FIREBASE_API_KEY=YOUR_FIREBASE_API_KEY
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=YOUR_FIREBASE_AUTH_DOMAIN
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=YOUR_FIREBASE_PROJECT_ID
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=YOUR_FIREBASE_STORAGE_BUCKET
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=YOUR_FIREBASE_MESSAGING_SENDER_ID
-NEXT_PUBLIC_FIREBASE_APP_ID=YOUR_FIREBASE_APP_ID
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 
 # Genkit (Google AI) Configuration
 GOOGLE_API_KEY=YOUR_GOOGLE_AI_API_KEY
 ```
 
-You can find your Firebase credentials in your Firebase project settings. The `GOOGLE_API_KEY` can be generated from your Google Cloud Console.
+You can find your Supabase credentials in your Supabase project settings (Settings → API). The `GOOGLE_API_KEY` can be generated from your Google Cloud Console.
 
 ### 3. Install Dependencies and Run Locally
 
@@ -92,15 +88,9 @@ Your project's environment variables must also be available to Vercel during the
 
 Add each variable from your `.env.local` file to your Vercel project. For each key-value pair, run the following command, replacing `KEY` and `VALUE` accordingly.
 
-**Important:** Note the `NEXT_PUBLIC_` prefix for Firebase keys.
-
 ```bash
-vercel env add NEXT_PUBLIC_FIREBASE_API_KEY YOUR_FIREBASE_API_KEY
-vercel env add NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN YOUR_FIREBASE_AUTH_DOMAIN
-vercel env add NEXT_PUBLIC_FIREBASE_PROJECT_ID YOUR_FIREBASE_PROJECT_ID
-vercel env add NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET YOUR_FIREBASE_STORAGE_BUCKET
-vercel env add NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID YOUR_FIREBASE_MESSAGING_SENDER_ID
-vercel env add NEXT_PUBLIC_FIREBASE_APP_ID YOUR_FIREBASE_APP_ID
+vercel env add NEXT_PUBLIC_SUPABASE_URL YOUR_SUPABASE_URL
+vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY YOUR_SUPABASE_ANON_KEY
 vercel env add GOOGLE_API_KEY YOUR_GOOGLE_AI_API_KEY
 ```
 

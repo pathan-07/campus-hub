@@ -4,9 +4,9 @@
 
 - Event Listing: Display a list of local events with details like date, time, location, and description.
 - Event Posting: Allow students to post new events with relevant details.
-- User Authentication: Enable students to sign in securely using Firebase Authentication.
+- User Authentication: Enable students to sign in securely using Supabase Auth.
 - Campus Resource Chatbot: Integrate a Gemini AI chatbot to answer student questions about campus resources. The chatbot will use its tool to evaluate whether to respond based on its current knowledge of the available content.
-- Data Storage: Use Firestore to store and manage event data and campus resources.
+- Data Storage: Use Supabase Database and Realtime to store and manage event data and campus resources.
 
 ## Style Guidelines:
 
