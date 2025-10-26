@@ -10,7 +10,7 @@ export type Event = {
   mapLink?: string | null;
   registrationLink?: string | null;
   authorId: string;
-  authorName: string;
+  authorName: string | null;
   createdAt: string | null;
   attendees: number;
   attendeeUids: string[];

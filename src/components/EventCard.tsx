@@ -74,12 +74,13 @@ export function EventCard({ event }: EventCardProps) {
       });
 
       if (event.registrationLink) {
+        const registrationLink = event.registrationLink;
         toast({
           title: 'Redirecting...',
           description: `You will now be redirected to the registration page.`,
         });
         setTimeout(() => {
-          window.open(event.registrationLink, '_blank');
+          window.open(registrationLink, '_blank');
         }, 2000);
       }
 
@@ -122,7 +123,9 @@ export function EventCard({ event }: EventCardProps) {
       <CardFooter className="flex-wrap gap-y-4 justify-between items-center">
         <div className="flex items-center text-sm">
           <User className="mr-2 h-4 w-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Posted by {event.authorName}</span>
+          <span className="text-muted-foreground">
+            Posted by {event.authorName || 'Unknown host'}
+          </span>
         </div>
         <div className="flex items-center gap-2">
             <Button asChild size="sm" variant="outline">

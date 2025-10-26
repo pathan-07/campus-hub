@@ -136,24 +136,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             continue;
           }
 
-          console.error(`Profile row for user ${targetUser.id} not found after ${maxAttempts} attempts. Trigger might have failed.`);
-          setUser({
-            uid: targetUser.id,
-            email: targetUser.email ?? null,
-            displayName:
-              (targetUser.user_metadata?.display_name as string | undefined) ??
-              targetUser.email?.split('@')[0] ??
-              'User',
-            photoURL: (targetUser.user_metadata?.avatar_url as string | undefined) ?? null,
-            bio: undefined,
-            points: 0,
-            badges: [],
-            eventsAttended: 0,
-          });
+          console.error(`Profile row for user ${targetUser.id} not found after ${maxAttempts} attempts. Trigger might have failed. Signing the user out to force re-authentication.`);
+
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            console.error('Failed to sign out after missing profile row:', signOutError);
+          }
+
+          setSession(null);
+          setAuthUser(null);
+          setUser(null);
           return;
         } catch (profileError) {
           console.error(`Failed to load user profile on attempt ${attempt}:`, profileError);
-          setUser(null);
           return;
         }
       }
@@ -298,10 +294,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setLoading(true);
+      let nextPhotoUrl = user?.photoURL ?? null;
 
       try {
-        let nextPhotoUrl = user?.photoURL ?? null;
-
         if (updates.photoFile) {
           const fileExtension = updates.photoFile.name.split('.').pop();
           const safeExtension = fileExtension ? `.${fileExtension}` : '';
@@ -324,18 +319,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .getPublicUrl(filePath);
 
           nextPhotoUrl = publicUrlData?.publicUrl ?? nextPhotoUrl;
-        }
-
-        const { error: authUpdateError } = await supabase.auth.updateUser({
-          data: {
-            display_name: updates.displayName,
-            bio: updates.bio,
-            photo_url: nextPhotoUrl,
-          },
-        });
-
-        if (authUpdateError) {
-          throw authUpdateError;
         }
 
         const { error: profileUpdateError } = await supabase

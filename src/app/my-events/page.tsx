@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { getEventsForUser, getUpcomingEvents } from '@/lib/events';
+import { getEventsCreatedByUser, getEventsForUser, getUpcomingEvents } from '@/lib/events';
 import { recommendEvents } from '@/ai/flows/recommend-events';
 import type { Event } from '@/types';
 import { Header } from '@/components/Header';
@@ -19,6 +19,7 @@ export default function MyEventsPage() {
   const router = useRouter();
 
   const [myEvents, setMyEvents] = useState<Event[]>([]);
+  const [createdEvents, setCreatedEvents] = useState<Event[]>([]);
   const [recommendedEvents, setRecommendedEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [recommendationsLoading, setRecommendationsLoading] = useState(true);
@@ -30,51 +31,87 @@ export default function MyEventsPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user) {
-      const fetchEvents = async () => {
-        setLoading(true);
-        const userEvents = await getEventsForUser(user.uid);
-        setMyEvents(userEvents);
-        setLoading(false);
-      };
-      fetchEvents();
+    if (!user) {
+      return;
     }
+
+    const fetchEvents = async () => {
+      setLoading(true);
+      try {
+        const [userEvents, userCreatedEvents] = await Promise.all([
+          getEventsForUser(user.uid),
+          getEventsCreatedByUser(user.uid),
+        ]);
+
+        setMyEvents(userEvents);
+        setCreatedEvents(userCreatedEvents);
+      } catch (error) {
+        console.error('Failed to load user events:', error);
+        setMyEvents([]);
+        setCreatedEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchEvents();
   }, [user]);
 
   useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    const uniqueUserEvents = Array.from(
+      new Map(
+        [...myEvents, ...createdEvents].map(event => [event.id, event])
+      ).values()
+    );
+
+    if (uniqueUserEvents.length === 0) {
+      setRecommendationsLoading(false);
+      setRecommendedEvents([]);
+      return;
+    }
+
     const fetchRecommendations = async () => {
-      if (myEvents.length > 0) {
-        setRecommendationsLoading(true);
-        try {
-          const allUpcomingEvents = await getUpcomingEvents();
-          
-          const plainAttendedEvents = myEvents.map(e => ({ title: e.title, description: e.description, category: e.category }));
-          const plainUpcomingEvents = allUpcomingEvents.map(e => ({ id: e.id, title: e.title, description: e.description, category: e.category }));
-          
-          const recommendationsResult = await recommendEvents({
-            attendedEvents: plainAttendedEvents,
-            upcomingEvents: plainUpcomingEvents
-          });
+      setRecommendationsLoading(true);
+      try {
+        const allUpcomingEvents = await getUpcomingEvents();
 
-          // Filter full event objects based on recommended IDs
-          const recommendedEventIds = new Set(recommendationsResult.recommendedEventIds);
-          const filteredRecommended = allUpcomingEvents.filter(event => recommendedEventIds.has(event.id));
-          setRecommendedEvents(filteredRecommended);
+        const plainAttendedEvents = uniqueUserEvents.map(event => ({
+          title: event.title,
+          description: event.description,
+          category: event.category,
+        }));
+        const plainUpcomingEvents = allUpcomingEvents.map(event => ({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          category: event.category,
+        }));
 
-        } catch (error) {
-          console.error("Failed to fetch recommendations:", error);
-        } finally {
-          setRecommendationsLoading(false);
-        }
-      } else {
+        const recommendationsResult = await recommendEvents({
+          attendedEvents: plainAttendedEvents,
+          upcomingEvents: plainUpcomingEvents,
+        });
+
+        const recommendedEventIds = new Set(recommendationsResult.recommendedEventIds);
+        const filteredRecommended = allUpcomingEvents.filter(event => recommendedEventIds.has(event.id));
+        setRecommendedEvents(filteredRecommended);
+      } catch (error) {
+        console.error('Failed to fetch recommendations:', error);
+      } finally {
         setRecommendationsLoading(false);
       }
     };
 
-    if (!loading) { // Only run after initial events have been loaded
-        fetchRecommendations();
-    }
-  }, [myEvents, loading]);
+    void fetchRecommendations();
+  }, [myEvents, createdEvents, loading]);
+
+  const createdEventsOnly = createdEvents.filter(
+    createdEvent => !myEvents.some(event => event.id === createdEvent.id)
+  );
 
 
   if (authLoading || !user) {
@@ -94,18 +131,40 @@ export default function MyEventsPage() {
             <h1 className="text-3xl md:text-5xl font-headline text-foreground mb-8">
               My Events
             </h1>
-             {loading ? (
+            {loading ? (
               <div className="grid gap-8">
-                {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
-              </div>
-            ) : myEvents.length > 0 ? (
-              <div className="grid gap-8">
-                {myEvents.map(event => (
-                  <EventCard key={event.id} event={event} />
+                {[...Array(2)].map((_, i) => (
+                  <Skeleton key={i} className="h-48 w-full" />
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground">You haven't RSVP'd to any events yet.</p>
+              <div className="grid gap-10">
+                <section>
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">Events I'm Attending</h2>
+                  {myEvents.length > 0 ? (
+                    <div className="grid gap-8">
+                      {myEvents.map(event => (
+                        <EventCard key={event.id} event={event} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">You haven't RSVP'd to any events yet.</p>
+                  )}
+                </section>
+
+                <section>
+                  <h2 className="text-2xl font-semibold text-foreground mb-4">Events I Created</h2>
+                  {createdEventsOnly.length > 0 ? (
+                    <div className="grid gap-8">
+                      {createdEventsOnly.map(event => (
+                        <EventCard key={event.id} event={event} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">You haven't created any events yet.</p>
+                  )}
+                </section>
+              </div>
             )}
           </div>
 

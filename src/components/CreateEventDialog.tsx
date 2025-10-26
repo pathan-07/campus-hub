@@ -116,9 +116,9 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
   const onSubmit = async (data: EventFormData) => {
     if (!user) {
       toast({
+        title: 'Error',
+        description: 'You must be logged in.',
         variant: 'destructive',
-        title: 'Not authenticated',
-        description: 'You must be logged in to create an event.',
       });
       return;
     }
@@ -126,18 +126,22 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
     setIsSubmitting(true);
     try {
       const eventData = {
-        ...data,
+        title: data.title,
+        description: data.description,
+        venue: data.venue,
+        location: data.location,
         date: new Date(data.date).toISOString(),
+        type: data.type,
+        category: data.category,
+        mapLink: data.mapLink || undefined,
+        registrationLink: data.registrationLink || undefined,
       };
 
-      if (!eventData.registrationLink) {
-        delete (eventData as Partial<typeof eventData>).registrationLink;
-      }
-      if (!eventData.mapLink) {
-        delete (eventData as Partial<typeof eventData>).mapLink;
-      }
-
-      await addEvent(eventData, user);
+      await addEvent(
+        eventData,
+        user.uid,
+        user.displayName ?? null
+      );
       toast({
         title: 'Event Created!',
         description: 'Your event has been posted successfully.',

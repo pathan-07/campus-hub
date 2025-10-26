@@ -19,8 +19,8 @@ type EventRow = {
   map_link: string | null;
   registration_link: string | null;
   author_id: string;
-  author_name: string;
-  created_at: string;
+  author_name: string | null;
+  created_at: string | null;
   attendees: number;
   attendee_uids: string[] | null;
   checked_in_uids: string[] | null;
@@ -70,7 +70,11 @@ async function fetchEvents(order: 'asc' | 'desc' = 'desc'): Promise<Event[]> {
   return rows.map(mapEvent);
 }
 
-export async function addEvent(eventData: EventData, user: UserProfile) {
+export async function addEvent(
+  eventData: EventData,
+  authorId: string,
+  authorName?: string | null
+): Promise<Event> {
   const payload = {
     title: eventData.title,
     description: eventData.description,
@@ -81,19 +85,39 @@ export async function addEvent(eventData: EventData, user: UserProfile) {
     category: eventData.category,
     map_link: eventData.mapLink ?? null,
     registration_link: eventData.registrationLink ?? null,
-    author_id: user.uid,
-    author_name: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+  author_id: authorId,
+  author_name: authorName ?? null,
     attendees: 0,
     attendee_uids: [],
     checked_in_uids: [],
   };
 
-  const { error } = await supabase.from('events').insert(payload);
+  const { data, error } = await supabase
+    .from('events')
+    .insert(payload)
+    .select(
+      'id, title, description, venue, location, date, type, category, map_link, registration_link, author_id, author_name, created_at, attendees, attendee_uids, checked_in_uids'
+    )
+    .single<EventRow>();
 
-  if (error) {
-    console.error('Error adding event in Supabase:', error);
-    throw new Error('Could not add event.');
+  if (error || !data) {
+    console.error(
+      'Error adding event in Supabase:',
+      JSON.stringify(
+        {
+          message: error?.message,
+          details: error?.details,
+          hint: error?.hint,
+          code: error?.code,
+        },
+        null,
+        2
+      )
+    );
+    throw new Error(error?.message ?? 'Could not add event.');
   }
+
+  return mapEvent(data);
 }
 
 export function getEventsStream(callback: (events: Event[]) => void) {
@@ -318,6 +342,22 @@ export async function getEventsForUser(userId: string): Promise<Event[]> {
 
   if (error) {
     console.error("Error fetching user's events: ", error);
+    return [];
+  }
+
+  const rows = (data ?? []) as EventRow[];
+  return rows.map(mapEvent);
+}
+
+export async function getEventsCreatedByUser(userId: string): Promise<Event[]> {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('author_id', userId)
+    .order('date', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching events created by user: ', error);
     return [];
   }
 
