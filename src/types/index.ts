@@ -28,11 +28,15 @@ export type UserProfile = {
   eventsAttended: number;
 };
 
+export type CommentAuthor = {
+  uid: string;
+  name: string;
+  photoURL: string | null;
+};
+
 export type Comment = {
   id: string;
   text: string;
-  authorId: string;
-  authorName: string;
-  authorPhotoURL?: string | null;
-  createdAt: string;
+  createdAt: Date;
+  author: CommentAuthor;
 };

@@ -18,17 +18,17 @@ import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function EventComment({ comment }: { comment: Comment }) {
-  const commentDate = comment.createdAt ? new Date(comment.createdAt) : new Date();
-  
+  const commentDate = comment.createdAt;
+
   return (
     <div className="flex items-start gap-4">
       <Avatar className="h-10 w-10">
-  <AvatarImage src={comment.authorPhotoURL ?? undefined} />
-        <AvatarFallback>{comment.authorName?.[0] ?? 'U'}</AvatarFallback>
+        <AvatarImage src={comment.author.photoURL ?? undefined} />
+        <AvatarFallback>{comment.author.name?.[0] ?? 'U'}</AvatarFallback>
       </Avatar>
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <p className="font-semibold">{comment.authorName}</p>
+          <p className="font-semibold">{comment.author.name}</p>
           <p className="text-xs text-muted-foreground">
             {formatDistanceToNow(commentDate, { addSuffix: true })}
           </p>
