@@ -12,12 +12,12 @@ import { Loader2, QrCode, User, ScanLine, XCircle, CheckCircle, Camera } from 'l
 import jsQR from 'jsqr';
 import { checkInUser } from '@/lib/events';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { getUsersByUIDs } from '@/lib/users';
+import type { UserProfile } from '@/types';
 
-type ScannedData = {
+type QrPayload = {
   userId: string;
   eventId: string;
-  userName: string;
-  userEmail: string;
 };
 
 export default function ScanPage() {
@@ -30,11 +30,22 @@ export default function ScanPage() {
   const streamRef = useRef<MediaStream | null>(null);
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [scannedData, setScannedData] = useState<ScannedData | null>(null);
+  const [scannedData, setScannedData] = useState<QrPayload | null>(null);
+  const [scannedUser, setScannedUser] = useState<UserProfile | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [scanResult, setScanResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [cameraStarted, setCameraStarted] = useState(false);
+
+  const loadScannedUser = useCallback(async (uid: string) => {
+    try {
+      const [profile] = await getUsersByUIDs([uid]);
+      setScannedUser(profile ?? null);
+    } catch (error) {
+      console.error('Error loading scanned user profile:', error);
+      setScannedUser(null);
+    }
+  }, []);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -108,11 +119,13 @@ export default function ScanPage() {
 
         if (code) {
           try {
-            const data = JSON.parse(code.data) as ScannedData;
-            if (data.userId && data.eventId && data.userName && data.userEmail) {
-                setScannedData(data);
-                setIsScanning(false);
-                stopCamera();
+            const data = JSON.parse(code.data) as QrPayload;
+            if (data.userId && data.eventId) {
+              setScannedData(data);
+              setScanResult(null);
+              setIsScanning(false);
+              stopCamera();
+              void loadScannedUser(data.userId);
             }
           } catch (e) {
             // Not a valid JSON QR code for our app, just ignore
@@ -127,7 +140,7 @@ export default function ScanPage() {
     }
 
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isScanning, stopCamera]);
+  }, [isScanning, stopCamera, loadScannedUser]);
 
 
   const handleCheckIn = async () => {
@@ -136,12 +149,14 @@ export default function ScanPage() {
     setIsCheckingIn(true);
     setScanResult(null);
 
+    const attendeeName = scannedUser?.displayName ?? 'Attendee';
+
     try {
       await checkInUser(scannedData.eventId, scannedData.userId);
-      setScanResult({ type: 'success', message: `${scannedData.userName} checked in successfully!` });
+      setScanResult({ type: 'success', message: `${attendeeName} checked in successfully!` });
       toast({
         title: 'Check-in Successful',
-        description: `${scannedData.userName} has been marked as attended.`,
+        description: `${attendeeName} has been marked as attended.`,
       });
     } catch (error: any) {
        setScanResult({ type: 'error', message: error.message || 'An unknown error occurred.' });
@@ -157,6 +172,7 @@ export default function ScanPage() {
   
   const handleScanAgain = () => {
     setScannedData(null);
+    setScannedUser(null);
     setScanResult(null);
     startCamera();
   }
@@ -212,13 +228,13 @@ export default function ScanPage() {
                       <p className="text-white font-bold mt-4">Point at a QR code</p>
                   </div>
               )}
-               {scannedData && !scanResult && (
-                   <div className="absolute inset-0 p-6 bg-background/90 flex flex-col items-center justify-center text-center">
-                      <User className="h-16 w-16 text-primary" />
-                      <h3 className="text-xl font-bold mt-4">{scannedData.userName}</h3>
-                      <p className="text-muted-foreground">{scannedData.userEmail}</p>
-                   </div>
-               )}
+              {scannedData && !scanResult && (
+                <div className="absolute inset-0 p-6 bg-background/90 flex flex-col items-center justify-center text-center">
+                  <User className="h-16 w-16 text-primary" />
+                  <h3 className="text-xl font-bold mt-4">{scannedUser?.displayName ?? 'Attendee'}</h3>
+                  <p className="text-muted-foreground">{scannedUser?.email ?? `ID: ${scannedData.userId}`}</p>
+                </div>
+              )}
                {scanResult && (
                    <div className={`absolute inset-0 p-6 bg-background/90 flex flex-col items-center justify-center text-center`}>
                       {scanResult.type === 'success' ? (

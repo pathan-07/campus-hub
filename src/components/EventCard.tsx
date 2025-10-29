@@ -23,9 +23,10 @@ import Link from 'next/link';
 
 interface EventCardProps {
   event: Event;
+  withActions?: boolean;
 }
 
-export function EventCard({ event }: EventCardProps) {
+export function EventCard({ event, withActions = true }: EventCardProps) {
   const eventDate = new Date(event.date);
   const { user } = useAuth();
   const router = useRouter();
@@ -51,10 +52,8 @@ export function EventCard({ event }: EventCardProps) {
       await registerForEvent(event.id, user);
       
       const ticketData = {
-        userId: user.uid,
         eventId: event.id,
-        userName: user.displayName,
-        userEmail: user.email,
+        userId: user.uid,
       };
       const qrDataString = JSON.stringify(ticketData);
       const dataUrl = await QRCode.toDataURL(qrDataString);
@@ -72,17 +71,6 @@ export function EventCard({ event }: EventCardProps) {
         title: 'Success!',
         description: `You're registered for "${event.title}". Your ticket is downloading.`,
       });
-
-      if (event.registrationLink) {
-        const registrationLink = event.registrationLink;
-        toast({
-          title: 'Redirecting...',
-          description: `You will now be redirected to the registration page.`,
-        });
-        setTimeout(() => {
-          window.open(registrationLink, '_blank');
-        }, 2000);
-      }
 
     } catch (error: any) {
       toast({
@@ -128,58 +116,62 @@ export function EventCard({ event }: EventCardProps) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-            <Button asChild size="sm" variant="outline">
-              <Link href={`/events/${event.id}`}>
-                <MessageSquare className="mr-1 h-4 w-4" />
-                Discuss
-              </Link>
-            </Button>
-          {event.mapLink && (
-            <Button asChild size="sm" variant="outline">
-              <a href={event.mapLink} target="_blank" rel="noopener noreferrer">
-                <Map className="mr-1 h-4 w-4" />
-                Map
-              </a>
-            </Button>
-          )}
-
-          {isCollegeEvent ? (
-            isUserHost ? (
+          {withActions && (
+            <>
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/events/${event.id}`}>
+                  <MessageSquare className="mr-1 h-4 w-4" />
+                  Discuss
+                </Link>
+              </Button>
+              {event.mapLink && (
                 <Button asChild size="sm" variant="outline">
-                    <Link href={`/events/${event.id}/participants`}>
-                        <Users className="mr-2 h-4 w-4" />
-                        View Participants
-                    </Link>
-                </Button>
-            ) : (
-                <Button
-                size="sm"
-                variant={isUserAttending ? 'secondary' : 'default'}
-                onClick={handleRsvp}
-                disabled={isLoading || isUserAttending}
-                >
-                {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : isUserAttending ? (
-                    <>
-                    <Check className="mr-2 h-4 w-4" />
-                    You're Going!
-                    </>
-                ) : (
-                    "I'm Going!"
-                )}
-                </Button>
-            )
-          ) : (
-             event.registrationLink && (
-                <Button asChild size="sm">
-                  <a href={event.registrationLink} target="_blank" rel="noopener noreferrer">
-                    Register
+                  <a href={event.mapLink} target="_blank" rel="noopener noreferrer">
+                    <Map className="mr-1 h-4 w-4" />
+                    Map
                   </a>
                 </Button>
-              )
+              )}
+
+              {isCollegeEvent ? (
+                isUserHost ? (
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/events/${event.id}/participants`}>
+                      <Users className="mr-2 h-4 w-4" />
+                      View Participants
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant={isUserAttending ? 'secondary' : 'default'}
+                    onClick={handleRsvp}
+                    disabled={isLoading || isUserAttending}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : isUserAttending ? (
+                      <>
+                        <Check className="mr-2 h-4 w-4" />
+                        You're Going!
+                      </>
+                    ) : (
+                      'RSVP & Get Ticket'
+                    )}
+                  </Button>
+                )
+              ) : (
+                event.registrationLink && (
+                  <Button asChild size="sm">
+                    <a href={event.registrationLink} target="_blank" rel="noopener noreferrer">
+                      Register on Official Site
+                    </a>
+                  </Button>
+                )
+              )}
+            </>
           )}
-         
+
           <Badge variant="secondary">
             {format(eventDate, 'MMM d')}
           </Badge>

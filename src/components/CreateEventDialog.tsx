@@ -18,7 +18,7 @@ import * as z from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { addEvent } from '@/lib/events';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createEventFromText } from '@/ai/flows/create-event-from-text';
 import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -27,7 +27,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const eventCategories = ['Tech', 'Sports', 'Music', 'Workshop', 'Social', 'Other'] as const;
 
-const eventSchema = z.object({
+const baseEventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters long'),
   description: z.string().min(10, 'Description must be at least 10 characters long'),
   venue: z.string().min(3, 'Venue is required'),
@@ -39,6 +39,16 @@ const eventSchema = z.object({
   category: z.enum(eventCategories, { required_error: 'You must select a category.' }),
   mapLink: z.string().url({ message: "Please enter a valid Google Maps URL." }).optional().or(z.literal('')),
   registrationLink: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+});
+
+const eventSchema = baseEventSchema.superRefine((data, ctx) => {
+  if (data.type === 'other' && (!data.registrationLink || data.registrationLink.trim() === '')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Registration link is required for external events.',
+      path: ['registrationLink'],
+    });
+  }
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -63,6 +73,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
     formState: { errors },
     setValue,
     control,
+    watch,
   } = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
@@ -74,6 +85,14 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
       category: 'Other',
     },
   });
+
+  const selectedType = watch('type', 'college');
+
+  useEffect(() => {
+    if (selectedType === 'college') {
+      setValue('registrationLink', '', { shouldValidate: true, shouldDirty: false });
+    }
+  }, [selectedType, setValue]);
 
   const handleGenerate = async () => {
     if (!eventText.trim()) {
@@ -125,6 +144,12 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
 
     setIsSubmitting(true);
     try {
+      const sanitizedMapLink = data.mapLink?.trim() ? data.mapLink.trim() : undefined;
+      const sanitizedRegistrationLink =
+        data.type === 'other' && data.registrationLink?.trim()
+          ? data.registrationLink.trim()
+          : undefined;
+
       const eventData = {
         title: data.title,
         description: data.description,
@@ -133,8 +158,8 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
         date: new Date(data.date).toISOString(),
         type: data.type,
         category: data.category,
-        mapLink: data.mapLink || undefined,
-        registrationLink: data.registrationLink || undefined,
+        mapLink: sanitizedMapLink,
+        registrationLink: sanitizedRegistrationLink,
       };
 
       await addEvent(
@@ -329,8 +354,21 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
                  
                   
                   <div className="grid gap-2">
-                    <Label htmlFor="registrationLink">Registration Link (optional)</Label>
-                    <Input id="registrationLink" type="url" placeholder="https://example.com/register" {...register('registrationLink')} />
+                    <Label htmlFor="registrationLink">
+                      Registration Link {selectedType === 'other' ? '(required)' : '(optional)'}
+                    </Label>
+                    <Input
+                      id="registrationLink"
+                      type="url"
+                      placeholder="https://example.com/register"
+                      disabled={selectedType === 'college'}
+                      {...register('registrationLink')}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {selectedType === 'college'
+                        ? 'Campus-hosted events do not need an external registration link.'
+                        : 'Provide the official registration page for this event.'}
+                    </p>
                     {errors.registrationLink && <p className="text-sm text-destructive">{errors.registrationLink.message}</p>}
                   </div>
                   <div className="grid gap-2">
