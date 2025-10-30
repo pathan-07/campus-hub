@@ -11,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { Event } from '@/types';
 import { format } from 'date-fns';
-import { Calendar, MapPin, User, Map, Users, Loader2, Check, MessageSquare } from 'lucide-react';
+import { Calendar, MapPin, User, Map, Users, Loader2, Check, MessageSquare, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -24,9 +24,10 @@ import Link from 'next/link';
 interface EventCardProps {
   event: Event;
   withActions?: boolean;
+  onGetTicket?: () => void;
 }
 
-export function EventCard({ event, withActions = true }: EventCardProps) {
+export function EventCard({ event, withActions = true, onGetTicket }: EventCardProps) {
   const eventDate = new Date(event.date);
   const { user } = useAuth();
   const router = useRouter();
@@ -140,6 +141,11 @@ export function EventCard({ event, withActions = true }: EventCardProps) {
                       <Users className="mr-2 h-4 w-4" />
                       View Participants
                     </Link>
+                  </Button>
+                ) : onGetTicket ? (
+                  <Button size="sm" onClick={onGetTicket}>
+                    <Ticket className="mr-2 h-4 w-4" />
+                    Get Ticket
                   </Button>
                 ) : (
                   <Button
