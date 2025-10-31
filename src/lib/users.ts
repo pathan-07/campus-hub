@@ -1,12 +1,11 @@
 
 'use client';
 
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { UserProfile } from '@/types';
 import { getSupabaseClient } from './supabaseClient';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-const supabase = getSupabaseClient();
-
+// Define the shape of the database row
 type UserRow = {
   id: string;
   email: string | null;
@@ -15,93 +14,131 @@ type UserRow = {
   bio: string | null;
   points: number | null;
   events_attended: number | null;
+  // Note: badges are in a separate table
 };
 
-function mapUser(row: UserRow): UserProfile {
+// Helper function to map Supabase row to our app's UserProfile type
+function mapUserProfile(row: UserRow): UserProfile {
   return {
     uid: row.id,
-    email: row.email,
-    displayName: row.display_name,
-    photoURL: row.photo_url,
+    email: row.email ?? null,
+    displayName: row.display_name ?? 'Anonymous',
+    photoURL: row.photo_url ?? null,
     bio: row.bio ?? undefined,
     points: row.points ?? 0,
-    badges: [],
     eventsAttended: row.events_attended ?? 0,
+    badges: [], // Badges need a separate query
   };
 }
 
+/**
+ * Fetches the top N users, ordered by points.
+ */
+export async function getTopUsers(count: number): Promise<UserProfile[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .order('points', { ascending: false })
+    .limit(count);
+
+  if (error) {
+    console.error('Error fetching top users:', error);
+    throw error;
+  }
+
+  return data.map(mapUserProfile);
+}
+
+/**
+ * Sets up a real-time stream for the leaderboard.
+ * Calls the callback with the full list of users (ordered by points) whenever they change.
+ * Returns an unsubscribe function.
+ */
 export function getUsersStream(callback: (users: UserProfile[]) => void) {
   let active = true;
+  const supabase = getSupabaseClient();
 
   const emit = async () => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, email, display_name, photo_url, bio, points, events_attended')
-      .order('points', { ascending: false });
+    try {
+      // Fetch all users, ordered by points
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('points', { ascending: false });
 
-    if (error) {
-      console.error('Error getting users stream: ', error);
-      return;
-    }
+      if (error) throw error;
 
-    if (active) {
-      const rows = (data ?? []) as UserRow[];
-      callback(rows.map(mapUser));
+      if (active) {
+        callback(data.map(mapUserProfile));
+      }
+    } catch (error) {
+      console.error('Error emitting user list:', error);
     }
   };
 
+  // Fetch initial list
   void emit();
 
+  // Set up real-time subscription
   const channel = supabase
-    .channel('users-stream')
-    .on<RealtimePostgresChangesPayload<UserRow>>(
+    .channel('public-users-leaderboard')
+    .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'users' },
-      () => {
+      {
+        event: '*', // Listen to INSERT, UPDATE, DELETE
+        schema: 'public',
+        table: 'users', // On the 'users' table
+      },
+      (payload: RealtimePostgresChangesPayload<UserRow>) => {
+        console.log('User data changed, refetching leaderboard...', payload);
+        // When a change happens, refetch all users
         void emit();
       }
     )
     .subscribe();
 
+  // Return unsubscribe function
   return () => {
     active = false;
     void supabase.removeChannel(channel);
   };
 }
 
+/**
+ * Fetches a single user's public profile.
+ */
+export async function getPublicProfile(userId: string): Promise<UserProfile | null> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching public profile:', error);
+    return null;
+  }
+
+  return mapUserProfile(data);
+}
+
+/**
+ * Fetches multiple user profiles from a list of UIDs.
+ * (Used by participants page, but getParticipantsForEvent is better)
+ */
 export async function getUsersByUIDs(uids: string[]): Promise<UserProfile[]> {
-  if (!uids || uids.length === 0) {
-    return [];
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .in('id', uids); // 'in' is the SQL equivalent of 'array-contains-any'
+
+  if (error) {
+    console.error('Error fetching users by UIDs:', error);
+    throw error;
   }
 
-  const CHUNK_SIZE = 30;
-  const chunks: string[][] = [];
-  for (let i = 0; i < uids.length; i += CHUNK_SIZE) {
-    chunks.push(uids.slice(i, i + CHUNK_SIZE));
-  }
-
-  try {
-    const results = await Promise.all(
-      chunks.map(async (chunk) => {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, email, display_name, photo_url, bio, points, events_attended')
-          .in('id', chunk);
-
-        if (error) {
-          throw error;
-        }
-
-  const rows = (data ?? []) as UserRow[];
-  return rows.map(mapUser);
-      })
-    );
-
-    const flat = results.flat();
-    const userMap = new Map(flat.map((user) => [user.uid, user]));
-    return uids.map((uid) => userMap.get(uid)).filter(Boolean) as UserProfile[];
-  } catch (error) {
-    console.error('Error getting users by UIDs: ', error);
-    throw new Error('Could not retrieve user profiles.');
-  }
+  return data.map(mapUserProfile);
 }

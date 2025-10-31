@@ -28,6 +28,11 @@ type EventRow = {
 
 type EventData = Omit<Event, 'id' | 'authorId' | 'authorName' | 'createdAt' | 'attendees' | 'attendeeUids' | 'checkedInUids'>;
 
+type AttendeeRowWithUserDisplayName = {
+  checked_in: boolean | null;
+  users?: { display_name: string | null } | { display_name: string | null }[];
+};
+
 function mapEvent(row: EventRow): Event {
   return {
     id: row.id,
@@ -152,6 +157,8 @@ export async function registerForEvent(eventId: string, user: UserProfile) {
   const pointsForAttending = 5; // Points for RSVP-ing
 
   try {
+    let alreadyRegistered = false;
+
     const { error: insertError } = await supabase
       .from('event_attendees')
       .insert({
@@ -161,37 +168,92 @@ export async function registerForEvent(eventId: string, user: UserProfile) {
 
     if (insertError) {
       if (insertError.code === '23505') {
+        alreadyRegistered = true;
         console.warn('User is already registered for this event.');
-        return;
+      } else {
+        console.error('Failed to register for event:', insertError);
+        throw new Error(insertError.message);
       }
-      console.error('Failed to register for event:', insertError);
-      throw new Error(insertError.message);
     }
 
-    const { data: userRow, error: userError } = await supabase
-      .from('users')
-      .select('points, events_attended')
-      .eq('id', user.uid)
-      .single();
+    if (!alreadyRegistered) {
+      const { data: userRow, error: userError } = await supabase
+        .from('users')
+        .select('points, events_attended')
+        .eq('id', user.uid)
+        .single();
 
-    if (userError || !userRow) {
-      console.error('Failed to load user profile when registering:', userError);
-      throw new Error('User profile is missing.');
+      if (userError || !userRow) {
+        console.error('Failed to load user profile when registering:', userError);
+        throw new Error('User profile is missing.');
+      }
+
+      const newEventsAttended = (userRow.events_attended ?? 0) + 1;
+      const newPoints = (userRow.points ?? 0) + pointsForAttending;
+
+      const { error: updateUserError } = await supabase
+        .from('users')
+        .update({
+          points: newPoints,
+          events_attended: newEventsAttended,
+        })
+        .eq('id', user.uid);
+
+      if (updateUserError) {
+        console.error('Failed to update user after registration:', updateUserError);
+      }
     }
 
-    const newEventsAttended = (userRow.events_attended ?? 0) + 1;
-    const newPoints = (userRow.points ?? 0) + pointsForAttending;
+    let attendeeUids: string[] | null = null;
 
-    const { error: updateUserError } = await supabase
-      .from('users')
-      .update({
-        points: newPoints,
-        events_attended: newEventsAttended,
-      })
-      .eq('id', user.uid);
+    const { data: attendeesData, error: attendeesError } = await supabase
+      .from('event_attendees')
+      .select('user_id')
+      .eq('event_id', eventId);
 
-    if (updateUserError) {
-      console.error('Failed to update user after registration:', updateUserError);
+    if (!attendeesError && Array.isArray(attendeesData)) {
+      attendeeUids = Array.from(
+        new Set(
+          attendeesData
+            .map((row) => row?.user_id)
+            .filter((uid): uid is string => typeof uid === 'string' && uid.length > 0)
+        )
+      );
+    } else if (attendeesError) {
+      console.error('Failed to load attendee list while syncing event:', attendeesError);
+    }
+
+    if (!attendeeUids) {
+      const { data: eventRow, error: eventError } = await supabase
+        .from('events')
+        .select('attendee_uids')
+        .eq('id', eventId)
+        .single<{ attendee_uids: string[] | null }>();
+
+      if (!eventError && eventRow) {
+        const existing = Array.isArray(eventRow.attendee_uids) ? [...eventRow.attendee_uids] : [];
+        if (!existing.includes(user.uid)) {
+          existing.push(user.uid);
+        }
+        attendeeUids = existing;
+      } else if (eventError) {
+        console.error('Failed to fetch event while syncing attendees:', eventError);
+      }
+    }
+
+    if (attendeeUids) {
+      const uniqueAttendeeUids = Array.from(new Set(attendeeUids));
+      const { error: syncError } = await supabase
+        .from('events')
+        .update({
+          attendee_uids: uniqueAttendeeUids,
+          attendees: uniqueAttendeeUids.length,
+        })
+        .eq('id', eventId);
+
+      if (syncError) {
+        console.error('Failed to sync event attendee stats:', syncError);
+      }
     }
   } catch (error) {
     console.error('Error in registerForEvent:', error);
@@ -199,43 +261,78 @@ export async function registerForEvent(eventId: string, user: UserProfile) {
   }
 }
 
-export async function checkInUser(eventId: string, userId: string) {
-  const { data: eventRow, error } = await supabase
-    .from('events')
-    .select('*')
-    .eq('id', eventId)
-    .single<EventRow>();
+/**
+ * Checks in a user for an event.
+ * This function updates the 'checked_in' status in the 'event_attendees' table.
+ */
+export async function checkInUser(
+  eventId: string,
+  userId: string
+): Promise<{ success: true, message: string } | { success: false, message: string }> {
+  const supabase = getSupabaseClient();
 
-  if (error || !eventRow) {
-    console.error('Failed to load event for check-in:', error);
-    throw new Error('Event not found.');
+  // Step 1: Check if the user is actually registered for the event
+  const { data: attendee, error: fetchError } = await supabase
+    .from('event_attendees')
+    .select('checked_in, users(display_name)') // User ka naam bhi fetch kar lete hain
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .single<AttendeeRowWithUserDisplayName>();
+
+  if (fetchError || !attendee) {
+    console.error('Check-in failed: User not registered.', fetchError);
+    return { success: false, message: 'This user is not registered for the event.' };
   }
 
-  if (eventRow.type !== 'college') {
-    throw new Error('Check-ins are only available for internal college events.');
+  let attendeeDisplayName: string | null | undefined = null;
+  if (Array.isArray(attendee.users)) {
+    attendeeDisplayName = attendee.users[0]?.display_name ?? null;
+  } else if (attendee.users) {
+    attendeeDisplayName = attendee.users.display_name ?? null;
   }
 
-  const attendees = Array.isArray(eventRow.attendee_uids) ? eventRow.attendee_uids : [];
-
-  if (!attendees.includes(userId)) {
-    throw new Error("This user has not RSVP'd for the event.");
+  // Step 2: Check if the user is already checked in
+  if (attendee.checked_in) {
+    return { success: false, message: `User '${attendeeDisplayName || 'N/A'}' has already been checked in.` };
   }
 
-  const checkedIn = Array.isArray(eventRow.checked_in_uids) ? eventRow.checked_in_uids : [];
-
-  if (checkedIn.includes(userId)) {
-    throw new Error('This user has already been checked in.');
-  }
-
+  // Step 3: Update the row to mark the user as checked in
+  // Yeh operation RLS policy require karega (jo hum Step 2 mein add karenge)
   const { error: updateError } = await supabase
-    .from('events')
-    .update({ checked_in_uids: [...checkedIn, userId] })
-    .eq('id', eventId);
+    .from('event_attendees')
+    .update({ checked_in: true, checked_in_at: new Date().toISOString() })
+    .eq('event_id', eventId)
+    .eq('user_id', userId);
 
   if (updateError) {
-    console.error('Failed to update check-in list:', updateError);
-    throw new Error('Could not check in user.');
+    console.error('Failed to check in user:', updateError);
+    return { success: false, message: `Check-in failed: ${updateError.message}. Are you the event author?` };
   }
+
+  const { data: eventRow, error: eventFetchError } = await supabase
+    .from('events')
+    .select('checked_in_uids')
+    .eq('id', eventId)
+    .single<{ checked_in_uids: string[] | null }>();
+
+  if (eventFetchError) {
+    console.error('Failed to fetch event while syncing check-ins:', eventFetchError);
+  } else if (eventRow) {
+    const existing = Array.isArray(eventRow.checked_in_uids) ? [...eventRow.checked_in_uids] : [];
+    if (!existing.includes(userId)) {
+      existing.push(userId);
+      const { error: syncEventError } = await supabase
+        .from('events')
+        .update({ checked_in_uids: existing })
+        .eq('id', eventId);
+
+      if (syncEventError) {
+        console.error('Failed to sync event checked-in list:', syncEventError);
+      }
+    }
+  }
+
+  return { success: true, message: `Successfully checked in '${attendeeDisplayName || 'N/A'}'!` };
 }
 
 export async function sendTicketByEmail(

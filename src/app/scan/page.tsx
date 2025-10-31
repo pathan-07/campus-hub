@@ -149,21 +149,29 @@ export default function ScanPage() {
     setIsCheckingIn(true);
     setScanResult(null);
 
-    const attendeeName = scannedUser?.displayName ?? 'Attendee';
-
     try {
-      await checkInUser(scannedData.eventId, scannedData.userId);
-      setScanResult({ type: 'success', message: `${attendeeName} checked in successfully!` });
-      toast({
-        title: 'Check-in Successful',
-        description: `${attendeeName} has been marked as attended.`,
-      });
+      const result = await checkInUser(scannedData.eventId, scannedData.userId);
+
+      if (result.success) {
+        setScanResult({ type: 'success', message: result.message });
+        toast({
+          title: 'Check-in Successful',
+          description: result.message,
+        });
+      } else {
+        setScanResult({ type: 'error', message: result.message });
+        toast({
+          variant: 'destructive',
+          title: 'Check-in Failed',
+          description: result.message,
+        });
+      }
     } catch (error: any) {
-       setScanResult({ type: 'error', message: error.message || 'An unknown error occurred.' });
-       toast({
+      setScanResult({ type: 'error', message: error.message || 'An unknown error occurred.' });
+      toast({
         variant: 'destructive',
-        title: 'Check-in Failed',
-        description: error.message || 'Could not check in the user. Please try again.',
+        title: 'Scan Failed',
+        description: error.message || 'Could not process check-in.',
       });
     } finally {
       setIsCheckingIn(false);

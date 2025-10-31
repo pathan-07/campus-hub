@@ -1,21 +1,17 @@
 'use client';
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-let cachedClient: SupabaseClient | null = null;
+const createClient = () => createClientComponentClient<any>();
 
-export function getSupabaseClient(): SupabaseClient {
-  if (cachedClient) {
-    return cachedClient;
+type SupabaseClientType = ReturnType<typeof createClient>;
+
+let cachedClient: SupabaseClientType | null = null;
+
+export function getSupabaseClient(): SupabaseClientType {
+  if (!cachedClient) {
+    cachedClient = createClient();
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase environment variables are not set.');
-  }
-
-  cachedClient = createClient(supabaseUrl, supabaseAnonKey);
   return cachedClient;
 }
