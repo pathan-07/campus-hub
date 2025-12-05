@@ -7,7 +7,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 // Define the shape of the database row
 type UserRow = {
-  id: string;
+  id: string; // Supabase uses 'id', our type uses 'uid'
   email: string | null;
   display_name: string | null;
   photo_url: string | null;
@@ -17,7 +17,7 @@ type UserRow = {
   // Note: badges are in a separate table
 };
 
-// Helper function to map Supabase row to our app's UserProfile type
+// Helper function to map Supabase row (snake_case) to our app's UserProfile (camelCase)
 function mapUserProfile(row: UserRow): UserProfile {
   return {
     uid: row.id,
@@ -27,23 +27,22 @@ function mapUserProfile(row: UserRow): UserProfile {
     bio: row.bio ?? undefined,
     points: row.points ?? 0,
     eventsAttended: row.events_attended ?? 0,
-    badges: [], // Badges need a separate query
+    badges: [], // Badges need a separate query, we'll leave it empty for the leaderboard
   };
 }
 
 /**
- * Fetches the top N users, ordered by points.
+ * Fetches all users, ordered by points.
  */
-export async function getTopUsers(count: number): Promise<UserProfile[]> {
+async function fetchAllUsersOrderedByPoints(): Promise<UserProfile[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('users')
     .select('*')
-    .order('points', { ascending: false })
-    .limit(count);
+    .order('points', { ascending: false }); // Order by points
 
   if (error) {
-    console.error('Error fetching top users:', error);
+    console.error('Error fetching users:', error);
     throw error;
   }
 
@@ -61,16 +60,9 @@ export function getUsersStream(callback: (users: UserProfile[]) => void) {
 
   const emit = async () => {
     try {
-      // Fetch all users, ordered by points
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('points', { ascending: false });
-
-      if (error) throw error;
-
+      const users = await fetchAllUsersOrderedByPoints();
       if (active) {
-        callback(data.map(mapUserProfile));
+        callback(users);
       }
     } catch (error) {
       console.error('Error emitting user list:', error);
@@ -91,7 +83,6 @@ export function getUsersStream(callback: (users: UserProfile[]) => void) {
         table: 'users', // On the 'users' table
       },
       (payload: RealtimePostgresChangesPayload<UserRow>) => {
-        console.log('User data changed, refetching leaderboard...', payload);
         // When a change happens, refetch all users
         void emit();
       }
@@ -106,27 +97,8 @@ export function getUsersStream(callback: (users: UserProfile[]) => void) {
 }
 
 /**
- * Fetches a single user's public profile.
- */
-export async function getPublicProfile(userId: string): Promise<UserProfile | null> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  if (error) {
-    console.error('Error fetching public profile:', error);
-    return null;
-  }
-
-  return mapUserProfile(data);
-}
-
-/**
  * Fetches multiple user profiles from a list of UIDs.
- * (Used by participants page, but getParticipantsForEvent is better)
+ * (This replaces your old getUsersByUIDs)
  */
 export async function getUsersByUIDs(uids: string[]): Promise<UserProfile[]> {
   const supabase = getSupabaseClient();

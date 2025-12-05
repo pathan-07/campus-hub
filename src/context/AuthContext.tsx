@@ -53,6 +53,7 @@ type RawUserRow = {
   bio: string | null;
   points: number | null;
   events_attended: number | null;
+  badges: string[] | null;
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     photoURL: row.photo_url ?? (fallbackUser?.user_metadata?.avatar_url as string | undefined) ?? null,
     bio: row.bio ?? undefined,
     points: row.points ?? 0,
-    badges: [],
+    badges: row.badges ?? [],
     eventsAttended: row.events_attended ?? 0,
   }), []);
 
@@ -91,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: existingProfile, error: selectError } = await supabase
         .from('users')
         .select(
-          'id, email, display_name, photo_url, bio, points, events_attended'
+          'id, email, display_name, photo_url, bio, points, events_attended, badges'
         )
         .eq('id', targetUser.id)
         .maybeSingle<RawUserRow>();

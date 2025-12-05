@@ -101,8 +101,17 @@ export default function LoginPage() {
   };
 
   const handleGuestLogin = async () => {
-    const guestEmail = 'guest@example.com';
-    const guestPassword = 'password123';
+    const guestEmail = process.env.NEXT_PUBLIC_GUEST_EMAIL || '';
+    const guestPassword = process.env.NEXT_PUBLIC_GUEST_PASSWORD || '';
+
+    if (!guestEmail || !guestPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Guest Login Unavailable',
+        description: 'Guest login is not configured. Please use email/password or Google sign-in.',
+      });
+      return;
+    }
 
     try {
       await login(guestEmail, guestPassword);
@@ -112,20 +121,8 @@ export default function LoginPage() {
       });
       router.push('/');
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        try {
-          await signup(guestEmail, guestPassword);
-          toast({
-            title: 'Welcome!',
-            description: 'Created guest account and logged you in.',
-          });
-          router.push('/');
-        } catch (signupError: any) {
-          handleError(signupError, 'guest');
-        }
-      } else {
-        handleError(error, 'guest');
-      }
+      // Handle error - show toast for any login failure
+      handleError(error, 'guest');
     }
   };
 

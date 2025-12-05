@@ -435,24 +435,32 @@ export function getEventStreamById(eventId: string, callback: (event: Event | nu
 }
 
 /**
- * Fetches all events a user has registered for by joining attendee rows with events.
+ * Fetches all events a user has registered for (RSVP'd).
+ * It joins 'event_attendees' with 'events' to get the full details.
  */
 export async function getEventsForUser(userId: string): Promise<Event[]> {
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .eq('author_id', userId)
-    .order('created_at', { ascending: false });
+    .from('event_attendees')
+    .select(`
+      events (*)
+    `)
+    .eq('user_id', userId);
 
   if (error) {
-    console.error("Error fetching user's created events:", error);
-    throw new Error("Could not fetch user's events.");
+    console.error("Error fetching user's events: ", error);
+    return [];
   }
 
-  const rows = (data ?? []) as EventRow[];
-  return rows.map((row) => mapEvent(row));
+  // The result structure is like: [ { events: { ...eventData } }, ... ]
+  // We need to extract the 'events' object and map it using our helper
+  const events = (data ?? [])
+    .map((item: any) => item.events) // Extract the nested event object
+    .filter((event: any) => event !== null) // Filter out any nulls (safety check)
+    .map((eventRow: any) => mapEvent(eventRow)); // Convert snake_case to camelCase
+
+  return events;
 }
 
 export async function getEventsCreatedByUser(userId: string): Promise<Event[]> {
