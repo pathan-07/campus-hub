@@ -441,24 +441,27 @@ export function getEventStreamById(eventId: string, callback: (event: Event | nu
 export async function getEventsForUser(userId: string): Promise<Event[]> {
   const supabase = getSupabaseClient();
 
+  // Query the 'event_attendees' table and join with 'events'
   const { data, error } = await supabase
     .from('event_attendees')
     .select(`
-      events (*)
+      events (
+        *
+      )
     `)
     .eq('user_id', userId);
 
   if (error) {
-    console.error("Error fetching user's events: ", error);
+    console.error("Error fetching user's tickets: ", error);
     return [];
   }
 
-  // The result structure is like: [ { events: { ...eventData } }, ... ]
-  // We need to extract the 'events' object and map it using our helper
+  // The data comes back as: [ { events: { ...eventData } }, ... ]
+  // We need to extract the 'events' object and map it
   const events = (data ?? [])
     .map((item: any) => item.events) // Extract the nested event object
-    .filter((event: any) => event !== null) // Filter out any nulls (safety check)
-    .map((eventRow: any) => mapEvent(eventRow)); // Convert snake_case to camelCase
+    .filter((event: any) => event !== null) // Safety check
+    .map((eventRow: any) => mapEvent(eventRow)); // Convert to your app's Event type
 
   return events;
 }

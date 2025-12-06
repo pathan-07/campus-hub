@@ -1,21 +1,23 @@
 
+// src/app/events/[eventId]/participants/page.tsx
 'use client';
-import { useEffect, useState, useRef, useCallback } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter, useParams } from 'next/navigation';
-import { checkInUser, getEventStreamById } from '@/lib/events';
-import { getUsersByUIDs } from '@/lib/users';
-import type { Event, UserProfile } from '@/types';
+import { useParams, useRouter } from 'next/navigation';
+import { getParticipantsForEvent, type Participant } from '@/lib/users';
+import { getEventById } from '@/lib/events';
+import type { Event } from '@/types';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 
 export default function ParticipantsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -24,23 +26,9 @@ export default function ParticipantsPage() {
   const eventId = params.eventId as string;
 
   const [event, setEvent] = useState<Event | null>(null);
-  const [participants, setParticipants] = useState<UserProfile[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [checkingInUid, setCheckingInUid] = useState<string | null>(null);
-  
-  const { toast } = useToast();
-
-  const participantIdsRef = useRef<string>('');
-
-  const fetchParticipantProfiles = useCallback(async (uids: string[]) => {
-      try {
-        const participantProfiles = await getUsersByUIDs(uids);
-        setParticipants(participantProfiles);
-      } catch (e: any) {
-        setError(e.message || 'Failed to load participant data.');
-      }
-  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -48,85 +36,33 @@ export default function ParticipantsPage() {
       router.push('/login');
       return;
     }
-    if (!eventId) {
-      setLoading(false);
-      setError("Event ID is missing.");
-      return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // 1. Fetch Event to check ownership
+        const eventData = await getEventById(eventId);
+        if (!eventData) throw new Error('Event not found.');
+        
+        if (eventData.authorId !== user.uid) {
+          throw new Error('You are not authorized to view this page.');
+        }
+        setEvent(eventData);
+
+        // 2. Fetch Participants using our new function
+        const data = await getParticipantsForEvent(eventId);
+        setParticipants(data);
+
+      } catch (e: any) {
+        console.error(e);
+        setError(e.message || 'Failed to load data.');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const unsubscribe = getEventStreamById(eventId, async (eventData) => {
-      if (loading) setLoading(false);
-      
-      if (!eventData) {
-        setError('Event not found.');
-        setEvent(null);
-        setParticipants([]);
-        return;
-      }
-      
-      if (eventData.authorId !== user.uid) {
-        setError('You are not authorized to view this page.');
-        setEvent(null);
-        setParticipants([]);
-        return;
-      }
-
-      setError(null);
-      setEvent(eventData);
-
-      const hasAttendees = eventData.attendeeUids && eventData.attendeeUids.length > 0;
-      const remoteParticipantIds = (eventData.attendeeUids || []).sort().join(',');
-
-      if (hasAttendees && (participantIdsRef.current !== remoteParticipantIds)) {
-        participantIdsRef.current = remoteParticipantIds;
-        fetchParticipantProfiles(eventData.attendeeUids);
-      } else if (!hasAttendees) {
-        setParticipants([]);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [user, authLoading, eventId, router, fetchParticipantProfiles, loading]);
-
-  const handleManualCheckIn = useCallback(async (participantUid: string) => {
-    if (!event) {
-      return;
-    }
-
-    setCheckingInUid(participantUid);
-
-    try {
-      const result = await checkInUser(event.id, participantUid);
-
-      toast({
-        title: result.success ? 'Check-in updated' : 'Check-in failed',
-        description: result.message,
-        variant: result.success ? undefined : 'destructive',
-      });
-
-      if (result.success) {
-        setEvent((current) => {
-          if (!current) {
-            return current;
-          }
-
-          const nextChecked = new Set(current.checkedInUids ?? []);
-          nextChecked.add(participantUid);
-
-          return { ...current, checkedInUids: Array.from(nextChecked) };
-        });
-      }
-    } catch (err) {
-      console.error('Manual check-in failed:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Check-in failed',
-        description: err instanceof Error ? err.message : 'An unknown error occurred.',
-      });
-    } finally {
-      setCheckingInUid(null);
-    }
-  }, [event, toast]);
+    fetchData();
+  }, [user, authLoading, eventId, router]);
 
   if (authLoading || loading) {
     return (
@@ -136,100 +72,105 @@ export default function ParticipantsPage() {
     );
   }
 
-  return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header />
-      <main className="flex-1 container mx-auto p-4 md:p-8">
-        {error ? (
+  if (error) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <Header />
+        <main className="flex-1 container mx-auto p-4">
           <Alert variant="destructive">
             <XCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        ) : event && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-3xl font-headline">Participants for "{event.title}"</CardTitle>
-              <CardDescription>
-                A list of users who have RSVP'd for your event. Total: {participants.length}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Participant</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead className="text-center">Checked In</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {participants.length > 0
-                      ? participants.map((p) => {
-                          const isCheckedIn = event.checkedInUids?.includes(p.uid);
-                          return (
-                            <TableRow key={p.uid}>
-                              <TableCell>
-                                <div className="flex items-center gap-4">
-                                  <Avatar>
-                                    <AvatarImage src={p.photoURL ?? undefined} />
-                                    <AvatarFallback>{p.displayName?.[0] ?? 'U'}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="font-medium">{p.displayName}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>{p.email}</TableCell>
-                              <TableCell className="text-center">
-                                {isCheckedIn ? (
-                                  <Badge variant="secondary" className="text-green-600 border-green-600">
-                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                    Yes
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline">
-                                    <XCircle className="mr-2 h-4 w-4" />
-                                    No
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {isCheckedIn ? (
-                                  <span className="text-sm text-muted-foreground">Checked</span>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleManualCheckIn(p.uid)}
-                                    disabled={checkingInUid === p.uid}
-                                  >
-                                    {checkingInUid === p.uid ? (
-                                      <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Updating...
-                                      </>
-                                    ) : (
-                                      'Mark Checked In'
-                                    )}
-                                  </Button>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      : (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">
-                            No one has RSVP'd yet.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                  </TableBody>
-                </Table>
+          <Button asChild className="mt-4" variant="outline">
+            <Link href="/">Go Home</Link>
+          </Button>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen bg-background">
+      <Header />
+      <main className="flex-1 container mx-auto p-4 md:p-8">
+        <div className="mb-6">
+          <Button variant="ghost" asChild className="mb-2 pl-0 hover:bg-transparent hover:text-primary">
+            <Link href={`/events/${eventId}`} className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Event
+            </Link>
+          </Button>
+          <h1 className="text-3xl font-headline font-bold">Participants</h1>
+          <p className="text-muted-foreground">For "{event?.title}"</p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Attendee List</CardTitle>
+                <CardDescription>
+                  Total Registered: {participants.length}
+                </CardDescription>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <div className="text-right">
+                 <span className="text-sm font-medium text-muted-foreground">Checked In</span>
+                 <p className="text-2xl font-bold text-green-600">
+                   {participants.filter(p => p.checkedIn).length}
+                 </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {participants.length > 0 ? (
+                    participants.map((p) => (
+                      <TableRow key={p.profile.uid}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={p.profile.photoURL ?? undefined} />
+                              <AvatarFallback>{p.profile.displayName?.[0] ?? 'U'}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{p.profile.displayName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{p.profile.email}</TableCell>
+                        <TableCell className="text-center">
+                          {p.checkedIn ? (
+                            <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+                              <CheckCircle className="mr-1 h-3 w-3" /> Checked In
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              Pending
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                        No one has registered yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </main>
       <Footer />
     </div>

@@ -114,3 +114,67 @@ export async function getUsersByUIDs(uids: string[]): Promise<UserProfile[]> {
 
   return data.map(mapUserProfile);
 }
+
+export type Participant = {
+  profile: UserProfile;
+  checkedIn: boolean;
+  checkedInAt: string | null;
+  registeredAt: string;
+};
+
+/**
+ * Fetches all participants for a specific event, joining with their profiles.
+ * This queries the 'event_attendees' table.
+ */
+export async function getParticipantsForEvent(eventId: string): Promise<Participant[]> {
+  const supabase = getSupabaseClient();
+
+  // Join event_attendees with the users table
+  const { data, error } = await supabase
+    .from('event_attendees')
+    .select(`
+      checked_in,
+      checked_in_at,
+      created_at,
+      users (
+        id,
+        display_name,
+        email,
+        photo_url,
+        bio,
+        points,
+        events_attended
+      )
+    `)
+    .eq('event_id', eventId);
+
+  if (error) {
+    console.error('Error fetching participants:', error);
+    throw new Error(error.message);
+  }
+
+  if (!data) return [];
+
+  // Map to our Participant type
+  return data.map((row: any) => {
+    const user = row.users;
+    // Safety check if user profile is missing
+    if (!user) return null;
+
+    return {
+      checkedIn: row.checked_in ?? false,
+      checkedInAt: row.checked_in_at ?? null,
+      registeredAt: row.created_at,
+      profile: {
+        uid: user.id,
+        email: user.email,
+        displayName: user.display_name,
+        photoURL: user.photo_url,
+        bio: user.bio,
+        points: user.points,
+        eventsAttended: user.events_attended,
+        badges: [], // We can leave this empty for the list view
+      } as UserProfile,
+    };
+  }).filter(Boolean) as Participant[];
+}
