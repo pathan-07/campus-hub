@@ -13,12 +13,16 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { EmptyState } from '@/components/EmptyState';
+import * as QRCode from 'qrcode';
 
 export default function MyEventsPage() {
   const { user, loading: authLoading } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -44,27 +48,24 @@ export default function MyEventsPage() {
     fetchMyEvents();
   }, [user, authLoading]);
 
-  const handleGetTicket = (event: Event) => {
-    setSelectedEvent(event);
+  const handleGetTicket = async (event: Event) => {
+    if (!user) return;
+    
+    try {
+      const ticketPayload = JSON.stringify({ eventId: event.id, userId: user.uid });
+      const dataUrl = await QRCode.toDataURL(ticketPayload);
+      setQrCodeDataUrl(dataUrl);
+      setSelectedEvent(event);
+      setIsQrDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to generate QR code:', error);
+    }
   };
 
   // Helper to split events into Upcoming and Past
   const now = new Date();
   const upcomingEvents = events.filter(e => new Date(e.date) >= now);
   const pastEvents = events.filter(e => new Date(e.date) < now);
-
-  const EmptyState = ({ message }: { message: string }) => (
-    <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed rounded-xl bg-muted/20">
-      <div className="bg-muted p-4 rounded-full mb-4">
-        <CalendarX className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-semibold mb-2">No events found</h3>
-      <p className="text-muted-foreground mb-6 max-w-sm">{message}</p>
-      <Button asChild>
-        <Link href="/">Browse Events</Link>
-      </Button>
-    </div>
-  );
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -111,19 +112,20 @@ export default function MyEventsPage() {
                     <EventCard
                       key={event.id}
                       event={event}
-                      // Only show "Get Ticket" for internal college events
                       onGetTicket={
                         event.type === 'college' ? () => handleGetTicket(event) : undefined
-                      }
-                      // Only show "View Official Site" for external events
-                      onShowExternalLink={
-                        event.type === 'other' ? event.registrationLink : undefined
                       }
                     />
                   ))}
                 </div>
               ) : (
-                <EmptyState message="You haven't RSVP'd to any upcoming events yet. Check out the homepage to find something cool!" />
+                <EmptyState 
+                  icon={CalendarX}
+                  title="No upcoming events"
+                  description="You haven't RSVP'd to any upcoming events yet. Check out the homepage to find something cool!"
+                  actionLabel="Browse Events"
+                  actionHref="/"
+                />
               )}
             </TabsContent>
 
@@ -134,14 +136,18 @@ export default function MyEventsPage() {
                     <EventCard
                       key={event.id}
                       event={event}
-                      // No ticket actions for past events usually
+                      withActions={false}
                     />
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>No past events found.</p>
-                </div>
+                <EmptyState 
+                  icon={History}
+                  title="No past events"
+                  description="You haven't attended any events yet. Start exploring!"
+                  actionLabel="Browse Events"
+                  actionHref="/"
+                />
               )}
             </TabsContent>
           </Tabs>
@@ -149,10 +155,19 @@ export default function MyEventsPage() {
 
         {/* QR Code Dialog */}
         <QrCodeDialog
-          event={selectedEvent}
-          user={user}
-          open={!!selectedEvent}
-          onOpenChange={() => setSelectedEvent(null)}
+          open={isQrDialogOpen}
+          onOpenChange={(open) => {
+            setIsQrDialogOpen(open);
+            if (!open) {
+              setSelectedEvent(null);
+              setQrCodeDataUrl('');
+            }
+          }}
+          qrCodeDataUrl={qrCodeDataUrl}
+          eventName={selectedEvent?.title ?? ''}
+          eventDate={selectedEvent?.date}
+          eventVenue={selectedEvent?.venue}
+          userName={user?.displayName ?? undefined}
         />
       </main>
 

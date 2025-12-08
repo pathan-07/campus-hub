@@ -59,14 +59,20 @@ export function EventList() {
 
   if (loading) {
     return (
-      <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-1">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex flex-col space-y-4 p-4 border rounded-lg">
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-16 w-full" />
+      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="flex flex-col space-y-4 p-4 border rounded-xl bg-card">
+            <Skeleton className="h-2 w-full rounded-t-xl" />
+            <div className="space-y-2 pt-2">
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
             </div>
-            <Skeleton className="h-6 w-1/2" />
+            <div className="space-y-3 pt-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-10 w-full" />
           </div>
         ))}
       </div>
@@ -129,14 +135,29 @@ export function EventList() {
 
       {filteredEvents.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
-          <h2 className="text-2xl font-headline">No Events Found</h2>
-          <p>
+          <div className="bg-muted/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-muted-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-headline font-semibold mb-2">No Events Found</h2>
+          <p className="max-w-md mx-auto">
             There are no events matching your current filters. Try adjusting
-            them!
+            them or check back later!
           </p>
         </div>
       ) : (
-        <div className="grid gap-8 md:grid-cols-1 lg:grid-cols-1">
+        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {filteredEvents.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}
