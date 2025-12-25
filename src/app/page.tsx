@@ -1,12 +1,48 @@
+'use client';
+
+import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
 import { EventList } from '@/components/EventList';
 import { CreateEventButton } from '@/components/CreateEventButton';
 import { Footer } from '@/components/Footer';
+import { Loader } from '@/components/Loader';
 import { Calendar, Users, MapPin, Sparkles, ArrowRight, Trophy, QrCode, Bell } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 export default function Home() {
+  const { user, loading } = useAuth();
+
+  // Show loader while checking auth status
+  if (loading) {
+    return <Loader fullScreen size="lg" text="Loading..." />;
+  }
+
+  // If user is logged in, show events page directly (no landing page)
+  if (user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background">
+        <Header />
+        <main className="flex-1 container mx-auto p-4 md:p-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-headline font-bold text-foreground">
+                Upcoming Events
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Explore and join exciting events happening around you
+              </p>
+            </div>
+            <CreateEventButton />
+          </div>
+          <EventList />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Landing page for non-logged-in users
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />

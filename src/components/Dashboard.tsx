@@ -27,8 +27,8 @@ export function Dashboard() {
             venue: e.venue,
             location: e.location,
             date: e.date,
-            mapLink: e.mapLink,
-            registrationLink: e.registrationLink
+            mapLink: e.mapLink ?? undefined,
+            registrationLink: e.registrationLink ?? undefined
           }));
 
           const result = await analyzeEvents({ events: plainEvents });

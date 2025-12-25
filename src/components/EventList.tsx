@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { getEventsStream } from '@/lib/events';
 import type { Event } from '@/types';
 import { EventCard } from './EventCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Loader } from '@/components/Loader';
 import {
   Select,
   SelectContent,
@@ -24,14 +25,17 @@ export function EventList() {
   const [locationFilter, setLocationFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
+  const handleEventsUpdate = useCallback((newEvents: Event[]) => {
+    setEvents(newEvents);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    const unsubscribe = getEventsStream((newEvents) => {
-      setEvents(newEvents);
-      setLoading(false);
-    });
+    setLoading(true);
+    const unsubscribe = getEventsStream(handleEventsUpdate);
 
     return () => unsubscribe();
-  }, []);
+  }, [handleEventsUpdate]);
 
   const locations = useMemo(() => {
     return ['all', ...gujaratCities];
@@ -59,22 +63,27 @@ export function EventList() {
 
   if (loading) {
     return (
-      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="flex flex-col space-y-4 p-4 border rounded-xl bg-card">
-            <Skeleton className="h-2 w-full rounded-t-xl" />
-            <div className="space-y-2 pt-2">
-              <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-2/3" />
-            </div>
-            <div className="space-y-3 pt-2">
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-8">
+          <Loader text="Loading events..." />
+        </div>
+        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex flex-col space-y-4 p-4 border rounded-xl bg-card">
+              <Skeleton className="h-2 w-full rounded-t-xl" />
+              <div className="space-y-2 pt-2">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+              <div className="space-y-3 pt-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
               <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
             </div>
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   }

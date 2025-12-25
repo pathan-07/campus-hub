@@ -8,6 +8,7 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Loader } from '@/components/Loader';
 import { Loader2, QrCode, User, ScanLine, XCircle, CheckCircle, Camera, PartyPopper, AlertTriangle, Info, Mail } from 'lucide-react';
 import jsQR from 'jsqr';
 import { checkInUser } from '@/lib/events';
@@ -187,11 +188,7 @@ export default function ScanPage() {
   }
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
+    return <Loader fullScreen size="lg" text="Loading scanner..." />;
   }
 
   return (

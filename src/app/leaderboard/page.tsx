@@ -5,7 +5,8 @@ import { useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Leaderboard } from '@/components/Leaderboard';
-import { Loader2, Trophy } from 'lucide-react';
+import { Loader } from '@/components/Loader';
+import { Trophy } from 'lucide-react';
 
 export default function LeaderboardPage() {
   const { user, loading } = useAuth();
@@ -18,11 +19,7 @@ export default function LeaderboardPage() {
   }, [user, loading, router]);
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
+    return <Loader fullScreen size="lg" text="Loading leaderboard..." />;
   }
 
   return (

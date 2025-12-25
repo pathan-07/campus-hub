@@ -119,7 +119,7 @@ export type Participant = {
   profile: UserProfile;
   checkedIn: boolean;
   checkedInAt: string | null;
-  registeredAt: string;
+  registeredAt: string | null;
 };
 
 /**
@@ -135,7 +135,6 @@ export async function getParticipantsForEvent(eventId: string): Promise<Particip
     .select(`
       checked_in,
       checked_in_at,
-      created_at,
       users (
         id,
         display_name,
@@ -164,7 +163,7 @@ export async function getParticipantsForEvent(eventId: string): Promise<Particip
     return {
       checkedIn: row.checked_in ?? false,
       checkedInAt: row.checked_in_at ?? null,
-      registeredAt: row.created_at,
+      registeredAt: null,
       profile: {
         uid: user.id,
         email: user.email,

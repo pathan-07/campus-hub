@@ -57,7 +57,7 @@ export function Chatbot() {
         venue: event.venue,
         location: event.location,
         date: event.date,
-        registrationLink: event.registrationLink,
+        registrationLink: event.registrationLink ?? undefined,
       }));
 
       const result = await answerCampusResourceQuestion({

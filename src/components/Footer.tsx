@@ -14,6 +14,10 @@ const footerLinks = {
     { label: 'Profile', href: '/profile' },
     { label: 'Scan Tickets', href: '/scan' },
   ],
+  legal: [
+    { label: 'Terms & Conditions', href: '/terms' },
+    { label: 'Privacy Policy', href: '/privacy' },
+  ],
 };
 
 export function Footer() {
@@ -91,6 +95,19 @@ export function Footer() {
             <h3 className="font-semibold text-foreground mb-4">Account</h3>
             <ul className="space-y-2">
               {footerLinks.support.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <h3 className="font-semibold text-foreground mb-4 mt-6">Legal</h3>
+            <ul className="space-y-2">
+              {footerLinks.legal.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}

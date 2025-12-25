@@ -101,25 +101,22 @@ export default function LoginPage() {
   };
 
   const handleGuestLogin = async () => {
-    const guestEmail = process.env.NEXT_PUBLIC_GUEST_EMAIL || '';
-    const guestPassword = process.env.NEXT_PUBLIC_GUEST_PASSWORD || '';
-
-    if (!guestEmail || !guestPassword) {
-      toast({
-        variant: 'destructive',
-        title: 'Guest Login Unavailable',
-        description: 'Guest login is not configured. Please use email/password or Google sign-in.',
-      });
-      return;
-    }
-
     try {
-      await login(guestEmail, guestPassword);
+      const res = await fetch('/api/auth/guest', { method: 'POST' });
+
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as
+          | { message?: string }
+          | null;
+        throw new Error(payload?.message ?? 'Guest login failed.');
+      }
+
       toast({
         title: 'Welcome back!',
         description: 'Logged in as guest successfully.',
       });
-      router.push('/');
+      // Hard navigation ensures the new auth cookies are picked up
+      window.location.assign('/');
     } catch (error: any) {
       // Handle error - show toast for any login failure
       handleError(error, 'guest');

@@ -2,7 +2,6 @@
 
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { Event, UserProfile } from '@/types';
-import { sendTicketEmail } from '@/ai/flows/send-ticket-email';
 import { getSupabaseClient } from './supabaseClient';
 
 const supabase = getSupabaseClient();
@@ -121,6 +120,8 @@ export async function addEvent(
 
 export function getEventsStream(callback: (events: Event[]) => void) {
   let active = true;
+  const supabaseClient = getSupabaseClient();
+  const channelName = `events-stream-${Date.now()}`;
 
   const emit = async () => {
     try {
@@ -133,10 +134,11 @@ export function getEventsStream(callback: (events: Event[]) => void) {
     }
   };
 
+  // Initial fetch
   void emit();
 
-  const channel = supabase
-    .channel('events-stream')
+  const channel = supabaseClient
+    .channel(channelName)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'events' },
@@ -144,11 +146,16 @@ export function getEventsStream(callback: (events: Event[]) => void) {
         void emit();
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        // Refetch on subscription to ensure fresh data
+        void emit();
+      }
+    });
 
   return () => {
     active = false;
-    void supabase.removeChannel(channel);
+    void supabaseClient.removeChannel(channel);
   };
 }
 
@@ -346,11 +353,15 @@ export async function sendTicketByEmail(
   }
 
   try {
-    await sendTicketEmail({
-      userEmail: user.email,
-      userName: user.displayName || 'Student',
-      eventName: event.title,
-      qrCodeDataUrl: qrCodeDataUrl,
+    await fetch('/api/tickets/send', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        userEmail: user.email,
+        userName: user.displayName || 'Student',
+        eventName: event.title,
+        qrCodeDataUrl,
+      }),
     });
   } catch (error) {
     console.error('Failed to trigger email sending flow:', error);
