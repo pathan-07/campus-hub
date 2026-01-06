@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Supabase environment variables are not set.');
+      return null;
     }
 
     return createClientComponentClient({
@@ -75,6 +75,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  const requireSupabase = useCallback(() => {
+    if (!supabase) {
+      throw new Error(
+        'Auth is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+      );
+    }
+
+    return supabase;
+  }, [supabase]);
 
   const toUserProfile = useCallback((row: RawUserRow, fallbackUser: User | null): UserProfile => ({
     uid: row.id,
@@ -89,6 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const ensureProfileRow = useCallback(
     async (targetUser: User): Promise<RawUserRow | null> => {
+      if (!supabase) {
+        return null;
+      }
+
       const { data: existingProfile, error: selectError } = await supabase
         .from('users')
         .select(
@@ -109,6 +123,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = useCallback(
     async (targetUser: User | null) => {
+      if (!supabase) {
+        setUser(null);
+        return;
+      }
+
       if (!targetUser) {
         setUser(null);
         return;
@@ -155,10 +174,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [ensureProfileRow, toUserProfile]
+    [ensureProfileRow, toUserProfile, supabase]
   );
 
   const initializeAuthState = useCallback(async () => {
+    if (!supabase) {
+      setSession(null);
+      setAuthUser(null);
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     const {
       data: { session: initialSession },
@@ -181,6 +208,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, loadProfile]);
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     void initializeAuthState();
 
     const {
@@ -203,7 +235,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
 
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const supabaseClient = requireSupabase();
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
           email,
           password: pass,
         });
@@ -221,7 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [supabase, loadProfile]
+    [requireSupabase, loadProfile]
   );
 
   const signup = useCallback(
@@ -229,7 +262,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
 
       try {
-        const { data, error } = await supabase.auth.signUp({
+        const supabaseClient = requireSupabase();
+        const { data, error } = await supabaseClient.auth.signUp({
           email,
           password: pass,
         });
@@ -253,11 +287,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [supabase, loadProfile]
+    [requireSupabase, loadProfile]
   );
 
   const logout = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
+    const supabaseClient = requireSupabase();
+    const { error } = await supabaseClient.auth.signOut();
     if (error) {
       throw error;
     }
@@ -266,11 +301,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthUser(null);
     setUser(null);
     router.push('/login');
-  }, [supabase, router]);
+  }, [requireSupabase, router]);
 
   const signInWithGoogle = useCallback(async () => {
+    const supabaseClient = requireSupabase();
     const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: origin
         ? {
@@ -282,7 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw error;
     }
-  }, [supabase]);
+  }, [requireSupabase]);
 
   const refreshProfile = useCallback(async () => {
     await loadProfile(authUser);
@@ -294,6 +330,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('No user is signed in to update the profile.');
       }
 
+      const supabaseClient = requireSupabase();
+
       setLoading(true);
       let nextPhotoUrl = user?.photoURL ?? null;
 
@@ -304,7 +342,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const timestamp = Date.now();
           const filePath = `${authUser.id}/${timestamp}${safeExtension}`;
 
-          const { error: uploadError } = await supabase.storage
+          const { error: uploadError } = await supabaseClient.storage
             .from('profile-pictures')
             .upload(filePath, updates.photoFile, {
               cacheControl: '3600',
@@ -315,14 +353,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw uploadError;
           }
 
-          const { data: publicUrlData } = supabase.storage
+          const { data: publicUrlData } = supabaseClient.storage
             .from('profile-pictures')
             .getPublicUrl(filePath);
 
           nextPhotoUrl = publicUrlData?.publicUrl ?? nextPhotoUrl;
         }
 
-        const { error: profileUpdateError } = await supabase
+        const { error: profileUpdateError } = await supabaseClient
           .from('users')
           .update({
             display_name: updates.displayName,
@@ -340,7 +378,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [authUser, supabase, refreshProfile, user?.photoURL]
+    [authUser, requireSupabase, refreshProfile, user?.photoURL]
   );
 
   const value: AuthContextType = {
