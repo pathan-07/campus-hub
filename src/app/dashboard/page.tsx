@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Dashboard } from '@/components/Dashboard';
-import { Loader2 } from 'lucide-react';
+import { Loader } from '@/components/Loader';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -18,11 +18,7 @@ export default function DashboardPage() {
   }, [user, loading, router]);
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
+    return <Loader fullScreen size="lg" text="Loading dashboard..." />;
   }
 
   return (

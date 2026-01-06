@@ -2,150 +2,219 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { getEventsForUser, getUpcomingEvents } from '@/lib/events';
-import { recommendEvents } from '@/ai/flows/recommend-events';
+import { getEventsForUser, getEventsCreatedByUser } from '@/lib/events';
 import type { Event } from '@/types';
+import { EventCard } from '@/components/EventCard';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader } from '@/components/Loader';
+import { QrCodeDialog } from '@/components/QrCodeDialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Ticket, History, CalendarX, PlusCircle, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { EventCard } from '@/components/EventCard';
-import { Loader2, Star } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { EmptyState } from '@/components/EmptyState';
+import { Badge } from '@/components/ui/badge';
+import * as QRCode from 'qrcode';
 
 export default function MyEventsPage() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
-
-  const [myEvents, setMyEvents] = useState<Event[]>([]);
-  const [recommendedEvents, setRecommendedEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [recommendationsLoading, setRecommendationsLoading] = useState(true);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [createdEvents, setCreatedEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
+    if (authLoading) return;
+
+    if (!user) {
+      setIsLoading(false);
+      return;
     }
-  }, [user, authLoading, router]);
 
-  useEffect(() => {
-    if (user) {
-      const fetchEvents = async () => {
-        setLoading(true);
+    const fetchMyEvents = async () => {
+      try {
+        setIsLoading(true);
+        // Fetch events user is attending
         const userEvents = await getEventsForUser(user.uid);
-        setMyEvents(userEvents);
-        setLoading(false);
-      };
-      fetchEvents();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const fetchRecommendations = async () => {
-      if (myEvents.length > 0) {
-        setRecommendationsLoading(true);
-        try {
-          const allUpcomingEvents = await getUpcomingEvents();
-          
-          const plainAttendedEvents = myEvents.map(e => ({ title: e.title, description: e.description, category: e.category }));
-          const plainUpcomingEvents = allUpcomingEvents.map(e => ({ id: e.id, title: e.title, description: e.description, category: e.category }));
-          
-          const recommendationsResult = await recommendEvents({
-            attendedEvents: plainAttendedEvents,
-            upcomingEvents: plainUpcomingEvents
-          });
-
-          // Filter full event objects based on recommended IDs
-          const recommendedEventIds = new Set(recommendationsResult.recommendedEventIds);
-          const filteredRecommended = allUpcomingEvents.filter(event => recommendedEventIds.has(event.id));
-          setRecommendedEvents(filteredRecommended);
-
-        } catch (error) {
-          console.error("Failed to fetch recommendations:", error);
-        } finally {
-          setRecommendationsLoading(false);
-        }
-      } else {
-        setRecommendationsLoading(false);
+        setEvents(userEvents);
+        
+        // Fetch events user has created
+        const myCreatedEvents = await getEventsCreatedByUser(user.uid);
+        setCreatedEvents(myCreatedEvents);
+      } catch (error) {
+        console.error('Failed to fetch my events:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    if (!loading) { // Only run after initial events have been loaded
-        fetchRecommendations();
+    fetchMyEvents();
+  }, [user, authLoading]);
+
+  const handleGetTicket = async (event: Event) => {
+    if (!user) return;
+    
+    try {
+      const ticketPayload = JSON.stringify({ eventId: event.id, userId: user.uid });
+      const dataUrl = await QRCode.toDataURL(ticketPayload);
+      setQrCodeDataUrl(dataUrl);
+      setSelectedEvent(event);
+      setIsQrDialogOpen(true);
+    } catch (error) {
+      console.error('Failed to generate QR code:', error);
     }
-  }, [myEvents, loading]);
+  };
 
-
-  if (authLoading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Helper to split events into Upcoming and Past
+  const now = new Date();
+  const upcomingEvents = events.filter(e => new Date(e.date) >= now);
+  const pastEvents = events.filter(e => new Date(e.date) < now);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
-      <main className="flex-1 container mx-auto p-4 md:p-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <h1 className="text-3xl md:text-5xl font-headline text-foreground mb-8">
-              My Events
-            </h1>
-             {loading ? (
-              <div className="grid gap-8">
-                {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
-              </div>
-            ) : myEvents.length > 0 ? (
-              <div className="grid gap-8">
-                {myEvents.map(event => (
-                  <EventCard key={event.id} event={event} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">You haven't RSVP'd to any events yet.</p>
-            )}
-          </div>
-
-          <div className="lg:col-span-1">
-             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 font-headline">
-                        <Star className="text-primary"/>
-                        Recommended For You
-                    </CardTitle>
-                    <CardDescription>AI-powered suggestions based on your activity.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {recommendationsLoading ? (
-                        <div className="space-y-4">
-                            <Skeleton className="h-20 w-full" />
-                            <Skeleton className="h-20 w-full" />
-                        </div>
-                    ) : recommendedEvents.length > 0 ? (
-                        <div className="space-y-4">
-                           {recommendedEvents.map(event => (
-                               <div key={event.id} className="p-4 border rounded-lg hover:bg-muted/50">
-                                   <h3 className="font-bold">{event.title}</h3>
-                                   <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
-                               </div>
-                           ))}
-                        </div>
-                    ) : (
-                         <Alert>
-                            <AlertTitle>Nothing to recommend yet!</AlertTitle>
-                            <AlertDescription>
-                                RSVP to a few events, and we'll start generating personalized recommendations for you here.
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                </CardContent>
-            </Card>
-          </div>
+      
+      <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
+        <div className="mb-8">
+          <h1 className="font-headline text-3xl md:text-4xl font-bold mb-2">My Events</h1>
+          <p className="text-muted-foreground">Manage your tickets and events you've created.</p>
         </div>
+
+        {authLoading || isLoading ? (
+          <div className="py-12">
+            <Loader text="Loading your events..." className="mb-8" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-[350px] w-full rounded-xl" />
+              ))}
+            </div>
+          </div>
+        ) : !user ? (
+          <div className="text-center py-20">
+            <h2 className="text-2xl font-bold mb-4">Please Log In</h2>
+            <p className="text-muted-foreground mb-6">You need to be logged in to view your events.</p>
+            <Button asChild>
+              <Link href="/login">Log In</Link>
+            </Button>
+          </div>
+        ) : (
+          <Tabs defaultValue="upcoming" className="w-full">
+            <TabsList className="mb-8 grid w-full max-w-[600px] grid-cols-3">
+              <TabsTrigger value="upcoming" className="gap-2">
+                <Ticket className="h-4 w-4" /> Tickets
+                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                  {upcomingEvents.length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="created" className="gap-2">
+                <PlusCircle className="h-4 w-4" /> Created
+                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                  {createdEvents.length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="past" className="gap-2">
+                <History className="h-4 w-4" /> Past
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="upcoming" className="space-y-6">
+              {upcomingEvents.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {upcomingEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onGetTicket={
+                        event.type === 'college' ? () => handleGetTicket(event) : undefined
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState 
+                  icon={CalendarX}
+                  title="No upcoming events"
+                  description="You haven't RSVP'd to any upcoming events yet. Check out the homepage to find something cool!"
+                  actionLabel="Browse Events"
+                  actionHref="/"
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="created" className="space-y-6">
+              {createdEvents.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {createdEvents.map((event) => (
+                    <div key={event.id} className="relative">
+                      <EventCard event={event} />
+                      <div className="absolute top-3 right-3 z-10">
+                        <Button size="sm" variant="secondary" asChild>
+                          <Link href={`/events/${event.id}/participants`} className="gap-1">
+                            <Users className="h-4 w-4" />
+                            Manage
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState 
+                  icon={PlusCircle}
+                  title="No events created"
+                  description="You haven't created any events yet. Start by creating your first event!"
+                  actionLabel="Create Event"
+                  actionHref="/"
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="past" className="space-y-6">
+              {pastEvents.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 opacity-80 grayscale-[30%]">
+                  {pastEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      withActions={false}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState 
+                  icon={History}
+                  title="No past events"
+                  description="You haven't attended any events yet. Start exploring!"
+                  actionLabel="Browse Events"
+                  actionHref="/"
+                />
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* QR Code Dialog */}
+        <QrCodeDialog
+          open={isQrDialogOpen}
+          onOpenChange={(open) => {
+            setIsQrDialogOpen(open);
+            if (!open) {
+              setSelectedEvent(null);
+              setQrCodeDataUrl('');
+            }
+          }}
+          qrCodeDataUrl={qrCodeDataUrl}
+          eventName={selectedEvent?.title ?? ''}
+          eventDate={selectedEvent?.date}
+          eventVenue={selectedEvent?.venue}
+          userName={user?.displayName ?? undefined}
+        />
       </main>
+
       <Footer />
     </div>
   );

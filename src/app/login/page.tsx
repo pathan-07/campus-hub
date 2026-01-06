@@ -45,7 +45,7 @@ export default function LoginPage() {
         variant: 'destructive',
         title: 'Domain Not Authorized',
         description:
-          'This domain is not authorized for Google Sign-In. Please check your Firebase project settings.',
+          'This domain is not authorized for Google Sign-In. Please check your Supabase project settings.',
       });
       return;
     }
@@ -101,31 +101,25 @@ export default function LoginPage() {
   };
 
   const handleGuestLogin = async () => {
-    const guestEmail = 'guest@example.com';
-    const guestPassword = 'password123';
-
     try {
-      await login(guestEmail, guestPassword);
+      const res = await fetch('/api/auth/guest', { method: 'POST' });
+
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as
+          | { message?: string }
+          | null;
+        throw new Error(payload?.message ?? 'Guest login failed.');
+      }
+
       toast({
         title: 'Welcome back!',
         description: 'Logged in as guest successfully.',
       });
-      router.push('/');
+      // Hard navigation ensures the new auth cookies are picked up
+      window.location.assign('/');
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        try {
-          await signup(guestEmail, guestPassword);
-          toast({
-            title: 'Welcome!',
-            description: 'Created guest account and logged you in.',
-          });
-          router.push('/');
-        } catch (signupError: any) {
-          handleError(signupError, 'guest');
-        }
-      } else {
-        handleError(error, 'guest');
-      }
+      // Handle error - show toast for any login failure
+      handleError(error, 'guest');
     }
   };
 

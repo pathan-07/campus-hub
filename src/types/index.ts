@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore';
-
 export type Event = {
   id: string;
   title: string;
@@ -9,14 +7,14 @@ export type Event = {
   date: string; // ISO string
   type: 'college' | 'other';
   category: 'Tech' | 'Sports' | 'Music' | 'Workshop' | 'Social' | 'Other';
-  mapLink?: string;
-  registrationLink?: string;
+  mapLink?: string | null;
+  registrationLink?: string | null;
   authorId: string;
-  authorName: string;
-  createdAt: Timestamp;
+  authorName: string | null;
+  createdAt: string | null;
   attendees: number;
   attendeeUids: string[];
-  checkedInUids?: string[];
+  checkedInUids: string[];
 };
 
 export type UserProfile = {
@@ -30,11 +28,15 @@ export type UserProfile = {
   eventsAttended: number;
 };
 
+export type CommentAuthor = {
+  uid: string;
+  name: string;
+  photoURL: string | null;
+};
+
 export type Comment = {
   id: string;
   text: string;
-  authorId: string;
-  authorName: string;
-  authorPhotoURL?: string;
-  createdAt: Timestamp;
+  createdAt: Date;
+  author: CommentAuthor;
 };

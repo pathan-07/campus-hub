@@ -40,7 +40,7 @@ The image should be vibrant and suitable for a promotional banner on a website. 
         },
       });
 
-      return media.url;
+      return media?.url ?? undefined;
     } catch (error) {
       console.error('Image generation failed:', error);
       // Return undefined instead of throwing an error to prevent the entire event creation from failing.

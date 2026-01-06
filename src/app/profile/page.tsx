@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { Loader } from '@/components/Loader';
 import { Loader2, User, Trophy, Star, CalendarCheck } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { Badge } from '@/components/ui/badge';
@@ -113,11 +114,7 @@ export default function ProfilePage() {
   };
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
+    return <Loader fullScreen size="lg" text="Loading profile..." />;
   }
 
   return (
