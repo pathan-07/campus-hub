@@ -19,5 +19,18 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  return NextResponse.redirect(requestUrl.origin);
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const forwardedProto = request.headers.get('x-forwarded-proto');
+
+  const redirectUrl = new URL('/', requestUrl);
+
+  if (forwardedHost) {
+    redirectUrl.host = forwardedHost.split(',')[0].trim();
+  }
+
+  if (forwardedProto) {
+    redirectUrl.protocol = `${forwardedProto.split(',')[0].trim()}:`;
+  }
+
+  return NextResponse.redirect(redirectUrl);
 }
