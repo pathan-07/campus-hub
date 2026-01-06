@@ -307,6 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabaseClient = requireSupabase();
 
     // Determine the redirect URL based on the environment
+    // Note: Do NOT use wildcards (**) here. Use the exact callback URL.
     const redirectUrl =
       process.env.NODE_ENV === 'production'
         ? 'https://campus-hub.vercel.app/auth/callback'
@@ -319,9 +320,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
   }, [requireSupabase]);
 
   const refreshProfile = useCallback(async () => {
