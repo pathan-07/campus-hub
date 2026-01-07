@@ -11,6 +11,12 @@
       "source": "/auth/callback/",
       "destination": "/auth/callback",
       "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "query", "key": "code" }],
+      "destination": "/auth/callback",
+      "permanent": false
     }
   ]
 }
