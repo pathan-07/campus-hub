@@ -187,24 +187,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setLoading(true);
-    const {
-      data: { session: initialSession },
-      error,
-    } = await supabase.auth.getSession();
+    try {
+      const {
+        data: { session: initialSession },
+        error,
+      } = await supabase.auth.getSession();
 
-    if (error) {
-      console.error('Failed to retrieve Supabase session:', error);
+      if (error) {
+        console.error('Failed to retrieve Supabase session:', error);
+        setSession(null);
+        setAuthUser(null);
+        setUser(null);
+        return;
+      }
+
+      setSession(initialSession);
+      setAuthUser(initialSession?.user ?? null);
+      await loadProfile(initialSession?.user ?? null);
+    } catch (error) {
+      console.error('Failed to initialize auth state:', error);
       setSession(null);
       setAuthUser(null);
       setUser(null);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setSession(initialSession);
-    setAuthUser(initialSession?.user ?? null);
-    await loadProfile(initialSession?.user ?? null);
-    setLoading(false);
   }, [supabase, loadProfile]);
 
   useEffect(() => {
@@ -219,10 +226,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event: AuthChangeEvent, nextSession: Session | null) => {
       setLoading(true);
-      setSession(nextSession);
-      setAuthUser(nextSession?.user ?? null);
-      await loadProfile(nextSession?.user ?? null);
-      setLoading(false);
+      try {
+        setSession(nextSession);
+        setAuthUser(nextSession?.user ?? null);
+        await loadProfile(nextSession?.user ?? null);
+      } catch (error) {
+        console.error('Failed to handle auth state change:', error);
+      } finally {
+        setLoading(false);
+      }
     });
 
     return () => {
