@@ -10,13 +10,19 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
 
   if (code) {
-    const cookieStore = await nextCookies();
+    // Next.js may type `cookies()` as async in some versions.
+    // Supabase auth-helpers expects a synchronous cookie store at runtime.
+    const cookieStore = (await nextCookies()) as any;
     const supabase = createRouteHandlerClient({
-      // Avoid calling next/headers cookies() inside the helper in Next 15.
-      // Resolve it once and hand back the store.
-      cookies: async () => cookieStore,
+      // Resolve cookies once and pass the store back synchronously.
+      // auth-helpers expects a cookie store (with .get/.set), not a Promise.
+      cookies: () => cookieStore,
     });
-    await supabase.auth.exchangeCodeForSession(code);
+    try {
+      await supabase.auth.exchangeCodeForSession(code);
+    } catch (error) {
+      console.error('Supabase auth callback failed to exchange code for session', error);
+    }
   }
 
   const forwardedHost = request.headers.get('x-forwarded-host');
