@@ -306,12 +306,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = useCallback(async () => {
     const supabaseClient = requireSupabase();
 
-    // Determine the redirect URL based on the environment
+    // Use the current origin so OAuth works on Vercel previews/custom domains.
+    // This runs in the browser (user action), but keep a fallback for safety.
+    const siteOrigin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:9002';
+
     // Note: Do NOT use wildcards (**) here. Use the exact callback URL.
-    const redirectUrl =
-      process.env.NODE_ENV === 'production'
-        ? 'https://campus-hub.vercel.app/auth/callback'
-        : 'http://localhost:3000/auth/callback';
+    const redirectUrl = `${siteOrigin}/auth/callback`;
 
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
