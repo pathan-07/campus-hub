@@ -21,6 +21,7 @@ const eventCategories = ['all', 'Tech', 'Sports', 'Music', 'Workshop', 'Social',
 export function EventList() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('upcoming');
   const [locationFilter, setLocationFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -28,11 +29,16 @@ export function EventList() {
   const handleEventsUpdate = useCallback((newEvents: Event[]) => {
     setEvents(newEvents);
     setLoading(false);
+    setError(null);
   }, []);
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = getEventsStream(handleEventsUpdate);
+    const unsubscribe = getEventsStream(handleEventsUpdate, (streamError) => {
+      console.error('Failed to load events:', streamError);
+      setError('We could not load events right now. Please try again later.');
+      setLoading(false);
+    });
 
     return () => unsubscribe();
   }, [handleEventsUpdate]);
@@ -84,6 +90,14 @@ export function EventList() {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-6 text-center">
+        <p className="text-sm text-destructive">{error}</p>
       </div>
     );
   }

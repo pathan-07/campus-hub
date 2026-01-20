@@ -3,8 +3,14 @@ import { cookies as nextCookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
 export async function POST() {
-  const guestEmail = process.env.GUEST_EMAIL ?? process.env.NEXT_PUBLIC_GUEST_EMAIL;
-  const guestPassword = process.env.GUEST_PASSWORD ?? process.env.NEXT_PUBLIC_GUEST_PASSWORD;
+  const guestEmail =
+    process.env.GUEST_EMAIL ??
+    process.env.NEXT_PUBLIC_GUEST_EMAIL ??
+    process.env.TEST_EMAIL;
+  const guestPassword =
+    process.env.GUEST_PASSWORD ??
+    process.env.NEXT_PUBLIC_GUEST_PASSWORD ??
+    process.env.TEST_PASSWORD;
 
   if (!guestEmail || !guestPassword) {
     return NextResponse.json(

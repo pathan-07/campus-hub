@@ -27,13 +27,22 @@ import { cn } from '@/lib/utils';
 export function Leaderboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
-    const unsubscribe = getUsersStream((newUsers) => {
-      setUsers(newUsers);
-      setLoading(false);
-    });
+    const unsubscribe = getUsersStream(
+      (newUsers) => {
+        setUsers(newUsers);
+        setLoading(false);
+        setError(null);
+      },
+      (streamError) => {
+        console.error('Failed to load leaderboard:', streamError);
+        setError('We could not load the leaderboard right now.');
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
@@ -66,6 +75,14 @@ export function Leaderboard() {
             ))}
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-6 text-center">
+        <p className="text-sm text-destructive">{error}</p>
       </div>
     );
   }

@@ -118,7 +118,10 @@ export async function addEvent(
   return mapEvent(data);
 }
 
-export function getEventsStream(callback: (events: Event[]) => void) {
+export function getEventsStream(
+  callback: (events: Event[]) => void,
+  onError?: (error: unknown) => void
+) {
   let active = true;
   const supabaseClient = getSupabaseClient();
   const channelName = `events-stream-${Date.now()}`;
@@ -131,6 +134,9 @@ export function getEventsStream(callback: (events: Event[]) => void) {
       }
     } catch (error) {
       console.error('Error emitting events:', error);
+      if (active) {
+        onError?.(error);
+      }
     }
   };
 

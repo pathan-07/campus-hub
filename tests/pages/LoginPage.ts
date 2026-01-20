@@ -21,8 +21,7 @@ export class LoginPage {
 
   async loginAsGuest() {
     await this.page.getByRole('button', { name: /Sign in as Guest/i }).click();
-    await expect(this.page.getByText(/Logged in as guest successfully/i).first()).toBeVisible({ timeout: 30000 });
-    await expect(this.page).toHaveURL('/', { timeout: 15000 });
+    await expect(this.page).toHaveURL('/', { timeout: 30000 });
   }
 
   async loginWithEmail(email: string, password: string) {

@@ -42,6 +42,10 @@ export function Dashboard() {
         setAnalytics({ summary: "No events posted yet. Post an event to see analytics.", eventsByLocation: [] });
       }
       setLoading(false);
+    }, (streamError) => {
+      console.error('Failed to load events for analytics:', streamError);
+      setError('Could not load events for analytics.');
+      setLoading(false);
     });
 
     return () => unsubscribe();

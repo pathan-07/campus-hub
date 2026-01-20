@@ -3,6 +3,12 @@
 
 import { test, expect } from '@playwright/test';
 import { LoginPage, HomePage, CreateEventDialog, MyEventsPage, EventDetailsPage } from './pages';
+import { hasGuestCredentials } from './helpers/auth';
+
+test.skip(
+  !hasGuestCredentials,
+  'Set GUEST_EMAIL/GUEST_PASSWORD or TEST_EMAIL/TEST_PASSWORD in .env.local to run E2E tests.'
+);
 
 test.describe('My Events Page', () => {
   test.beforeEach(async ({ page }) => {

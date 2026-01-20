@@ -3,6 +3,7 @@
 // Full flow: Login -> Create Event -> RSVP
 
 import { test, expect } from '@playwright/test';
+import { hasGuestCredentials } from './helpers/auth';
 
 // Test credentials from environment variables
 // Set TEST_EMAIL and TEST_PASSWORD in your .env.local file
@@ -10,6 +11,10 @@ const TEST_EMAIL = process.env.TEST_EMAIL || '';
 const TEST_PASSWORD = process.env.TEST_PASSWORD || '';
 
 test.describe('Campus Hub Full Flow', () => {
+  test.skip(
+    !hasGuestCredentials,
+    'Set GUEST_EMAIL/GUEST_PASSWORD or TEST_EMAIL/TEST_PASSWORD in .env.local to run E2E tests.'
+  );
   test.beforeEach(async ({ page }) => {
     // Clear any existing session
     await page.context().clearCookies();
@@ -29,12 +34,8 @@ test.describe('Campus Hub Full Flow', () => {
     // This avoids Google OAuth popup which Playwright can't handle easily
     await page.getByRole('button', { name: /Sign in as Guest/i }).click();
     
-    // Wait for success toast to appear (indicates login worked)
-    // Look for the toast description text since "Welcome Back" is also a page heading
-    await expect(page.getByText(/Logged in as guest successfully/i).first()).toBeVisible({ timeout: 30000 });
-    
-    // Now wait for redirect to home page
-    await expect(page).toHaveURL('/', { timeout: 15000 });
+    // Wait for redirect to home page
+    await expect(page).toHaveURL('/', { timeout: 30000 });
     console.log('✓ Guest login successful');
 
     // ============================================

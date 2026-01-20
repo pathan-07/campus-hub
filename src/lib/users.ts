@@ -54,7 +54,10 @@ async function fetchAllUsersOrderedByPoints(): Promise<UserProfile[]> {
  * Calls the callback with the full list of users (ordered by points) whenever they change.
  * Returns an unsubscribe function.
  */
-export function getUsersStream(callback: (users: UserProfile[]) => void) {
+export function getUsersStream(
+  callback: (users: UserProfile[]) => void,
+  onError?: (error: unknown) => void
+) {
   let active = true;
   const supabase = getSupabaseClient();
 
@@ -66,6 +69,9 @@ export function getUsersStream(callback: (users: UserProfile[]) => void) {
       }
     } catch (error) {
       console.error('Error emitting user list:', error);
+      if (active) {
+        onError?.(error);
+      }
     }
   };
 
