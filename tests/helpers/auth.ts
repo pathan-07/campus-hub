@@ -4,5 +4,8 @@ export const guestCredentials = {
 };
 
 export const hasGuestCredentials = Boolean(
-  guestCredentials.email && guestCredentials.password
+  guestCredentials.email &&
+  guestCredentials.password &&
+  !guestCredentials.email.includes('your_') &&
+  !guestCredentials.password.includes('your_')
 );

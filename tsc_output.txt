@@ -1,0 +1,7 @@
+src/ai/flows/analyze-events.ts(66,9): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/answer-campus-resource-question.ts(73,9): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/create-event-from-text.ts(70,12): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/generate-event-image.ts(28,11): error TS7031: Binding element 'title' implicitly has an 'any' type.
+src/ai/flows/generate-event-image.ts(28,18): error TS7031: Binding element 'description' implicitly has an 'any' type.
+src/ai/flows/recommend-events.ts(75,10): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/ai/flows/send-ticket-email.ts(41,10): error TS7006: Parameter 'input' implicitly has an 'any' type.

@@ -187,11 +187,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setLoading(true);
+
+    // Timeout promise to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Auth initialization timed out')), 5000)
+    );
+
     try {
       const {
         data: { session: initialSession },
         error,
-      } = await supabase.auth.getSession();
+      } = await Promise.race([
+        supabase.auth.getSession(),
+        timeoutPromise.then(() => { throw new Error('Timeout'); })
+      ]) as { data: { session: Session | null }, error: any };
 
       if (error) {
         console.error('Failed to retrieve Supabase session:', error);
@@ -203,9 +212,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setSession(initialSession);
       setAuthUser(initialSession?.user ?? null);
-      await loadProfile(initialSession?.user ?? null);
+      
+      // Also race the profile load so it doesn't hang
+      await Promise.race([
+        loadProfile(initialSession?.user ?? null),
+        timeoutPromise
+      ]).catch(e => console.warn('Profile load timed out or failed', e));
+
     } catch (error) {
       console.error('Failed to initialize auth state:', error);
+      // Fallback to logged out state on error/timeout
       setSession(null);
       setAuthUser(null);
       setUser(null);
