@@ -116,7 +116,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw selectError;
       }
 
-      return existingProfile ?? null;
+      if (existingProfile) {
+        return existingProfile;
+      }
+
+      const displayName =
+        (targetUser.user_metadata?.full_name as string | undefined) ??
+        (targetUser.user_metadata?.name as string | undefined) ??
+        targetUser.email ??
+        null;
+
+      const photoUrl =
+        (targetUser.user_metadata?.avatar_url as string | undefined) ??
+        null;
+
+      const { data: createdProfile, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: targetUser.id,
+          email: targetUser.email ?? null,
+          display_name: displayName,
+          photo_url: photoUrl,
+          points: 0,
+          events_attended: 0,
+          badges: [],
+        })
+        .select(
+          'id, email, display_name, photo_url, bio, points, events_attended, badges'
+        )
+        .maybeSingle<RawUserRow>();
+
+      if (insertError) {
+        console.error('Error creating user profile row:', insertError);
+        throw insertError;
+      }
+
+      return createdProfile ?? null;
     },
     [supabase]
   );
@@ -156,16 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             continue;
           }
 
-          console.error(`Profile row for user ${targetUser.id} not found after ${maxAttempts} attempts. Trigger might have failed. Signing the user out to force re-authentication.`);
-
-          try {
-            await supabase.auth.signOut();
-          } catch (signOutError) {
-            console.error('Failed to sign out after missing profile row:', signOutError);
-          }
-
-          setSession(null);
-          setAuthUser(null);
+          console.error(`Profile row for user ${targetUser.id} not found after ${maxAttempts} attempts.`);
           setUser(null);
           return;
         } catch (profileError) {
