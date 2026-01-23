@@ -10,12 +10,14 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
 
   if (code) {
+    const cookieStore = nextCookies();
     const supabase = createRouteHandlerClient({
-      cookies: nextCookies,
+      cookies: () => cookieStore,
     });
 
     try {
       await supabase.auth.exchangeCodeForSession(code);
+      await supabase.auth.getSession();
     } catch (error) {
       console.error('Supabase auth callback failed to exchange code for session', error);
     }
