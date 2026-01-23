@@ -10,14 +10,10 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
 
   if (code) {
-    // Next.js may type `cookies()` as async in some versions.
-    // Supabase auth-helpers expects a synchronous cookie store at runtime.
-    const cookieStore = (await nextCookies()) as any;
     const supabase = createRouteHandlerClient({
-      // Resolve cookies once and pass the store back synchronously.
-      // auth-helpers expects a cookie store (with .get/.set), not a Promise.
-      cookies: () => cookieStore,
+      cookies: nextCookies,
     });
+
     try {
       await supabase.auth.exchangeCodeForSession(code);
     } catch (error) {
