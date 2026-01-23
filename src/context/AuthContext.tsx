@@ -283,18 +283,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(nextSession);
         setAuthUser(nextSession?.user ?? null);
         await loadProfile(nextSession?.user ?? null);
-
-        if (
-          event === 'SIGNED_IN' &&
-          typeof window !== 'undefined' &&
-          typeof sessionStorage !== 'undefined'
-        ) {
-          const alreadyRefreshed = sessionStorage.getItem('oauth:refreshed');
-          if (!alreadyRefreshed) {
-            sessionStorage.setItem('oauth:refreshed', '1');
-            window.location.reload();
-          }
-        }
       } catch (error) {
         console.error('Failed to handle auth state change:', error);
       } finally {
