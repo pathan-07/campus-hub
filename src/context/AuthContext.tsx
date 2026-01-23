@@ -116,42 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw selectError;
       }
 
-      if (existingProfile) {
-        return existingProfile;
-      }
-
-      const displayName =
-        (targetUser.user_metadata?.full_name as string | undefined) ??
-        (targetUser.user_metadata?.name as string | undefined) ??
-        targetUser.email ??
-        null;
-
-      const photoUrl =
-        (targetUser.user_metadata?.avatar_url as string | undefined) ??
-        null;
-
-      const { data: createdProfile, error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: targetUser.id,
-          email: targetUser.email ?? null,
-          display_name: displayName,
-          photo_url: photoUrl,
-          points: 0,
-          events_attended: 0,
-          badges: [],
-        })
-        .select(
-          'id, email, display_name, photo_url, bio, points, events_attended, badges'
-        )
-        .maybeSingle<RawUserRow>();
-
-      if (insertError) {
-        console.error('Error creating user profile row:', insertError);
-        throw insertError;
-      }
-
-      return createdProfile ?? null;
+      return existingProfile ?? null;
     },
     [supabase]
   );
@@ -167,6 +132,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         return;
       }
+
+      setUser((current) => {
+        if (current) {
+          return current;
+        }
+
+        return {
+          uid: targetUser.id,
+          email: targetUser.email ?? null,
+          displayName:
+            (targetUser.user_metadata?.full_name as string | undefined) ??
+            (targetUser.user_metadata?.name as string | undefined) ??
+            targetUser.email ??
+            null,
+          photoURL: (targetUser.user_metadata?.avatar_url as string | undefined) ?? null,
+          bio: undefined,
+          points: 0,
+          badges: [],
+          eventsAttended: 0,
+        } as UserProfile;
+      });
 
       let attempt = 0;
       const maxAttempts = 3;
@@ -191,7 +177,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             continue;
           }
 
-          console.error(`Profile row for user ${targetUser.id} not found after ${maxAttempts} attempts.`);
+          console.error(`Profile row for user ${targetUser.id} not found after ${maxAttempts} attempts. Trigger might have failed. Signing the user out to force re-authentication.`);
+
+          try {
+            await supabase.auth.signOut();
+          } catch (signOutError) {
+            console.error('Failed to sign out after missing profile row:', signOutError);
+          }
+
+          setSession(null);
+          setAuthUser(null);
           setUser(null);
           return;
         } catch (profileError) {
@@ -229,7 +224,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ]) as { data: { session: Session | null }, error: any };
 
       if (error) {
+        const message = (error as Error)?.message ?? String(error);
         console.error('Failed to retrieve Supabase session:', error);
+
+        if (message.toLowerCase().includes('refresh token')) {
+          try {
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (!userError && userData?.user) {
+              setSession(null);
+              setAuthUser(userData.user);
+              await loadProfile(userData.user);
+              return;
+            }
+          } catch (fallbackError) {
+            console.warn('Failed to recover user from refresh token error:', fallbackError);
+          }
+        }
+
         setSession(null);
         setAuthUser(null);
         setUser(null);
