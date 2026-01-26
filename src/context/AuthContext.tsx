@@ -216,6 +216,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const sessionPromise = supabase.auth.getSession();
 
+    const loadProfileWithTimeout = async (targetUser: User | null) => {
+      const timeoutMs = 8000;
+      const timeoutPromise = new Promise<{ timeout: true }>((resolve) =>
+        setTimeout(() => resolve({ timeout: true }), timeoutMs)
+      );
+
+      const result = await Promise.race([
+        loadProfile(targetUser).then(() => ({ timeout: false as const })),
+        timeoutPromise,
+      ]);
+
+      if (result.timeout) {
+        console.warn('Profile load timed out.');
+      }
+    };
+
     sessionPromise
       .then(async ({ data: { session: initialSession }, error }) => {
         if (error) {
@@ -244,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setSession(initialSession);
         setAuthUser(initialSession?.user ?? null);
-        await loadProfile(initialSession?.user ?? null);
+        await loadProfileWithTimeout(initialSession?.user ?? null);
       })
       .catch((error) => {
         console.error('Failed to initialize auth state:', error);
@@ -282,7 +298,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setSession(nextSession);
         setAuthUser(nextSession?.user ?? null);
-        await loadProfile(nextSession?.user ?? null);
+        await new Promise<void>((resolve) => {
+          const timeoutMs = 8000;
+          const timer = setTimeout(() => {
+            console.warn('Profile load timed out during auth state change.');
+            resolve();
+          }, timeoutMs);
+
+          loadProfile(nextSession?.user ?? null)
+            .then(() => {
+              clearTimeout(timer);
+              resolve();
+            })
+            .catch(() => {
+              clearTimeout(timer);
+              resolve();
+            });
+        });
       } catch (error) {
         console.error('Failed to handle auth state change:', error);
       } finally {
