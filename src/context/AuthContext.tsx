@@ -211,17 +211,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Timeout promise to prevent infinite loading
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Auth initialization timed out')), 5000)
+      setTimeout(() => reject(new Error('Auth initialization timed out')), 15000)
     );
 
     try {
-      const {
-        data: { session: initialSession },
-        error,
-      } = await Promise.race([
-        supabase.auth.getSession(),
-        timeoutPromise.then(() => { throw new Error('Timeout'); })
-      ]) as { data: { session: Session | null }, error: any };
+      let attempt = 0;
+      let initialSession: Session | null = null;
+      let error: any = null;
+
+      while (attempt < 3) {
+        attempt += 1;
+        const result = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise.then(() => { throw new Error('Timeout'); })
+        ]) as { data: { session: Session | null }, error: any };
+
+        initialSession = result.data.session;
+        error = result.error;
+
+        if (!error) {
+          break;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      }
 
       if (error) {
         const message = (error as Error)?.message ?? String(error);
