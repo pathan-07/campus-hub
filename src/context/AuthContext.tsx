@@ -209,9 +209,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
 
+    const timeoutMs = 15000;
     // Timeout promise to prevent infinite loading
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Auth initialization timed out')), 15000)
+    const timeoutPromise = new Promise<{ timeout: true }>((resolve) =>
+      setTimeout(() => resolve({ timeout: true }), timeoutMs)
     );
 
     try {
@@ -222,12 +223,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       while (attempt < 3) {
         attempt += 1;
         const result = await Promise.race([
-          supabase.auth.getSession(),
-          timeoutPromise.then(() => { throw new Error('Timeout'); })
-        ]) as { data: { session: Session | null }, error: any };
+          supabase.auth.getSession().then((value) => ({ timeout: false as const, value })),
+          timeoutPromise
+        ]);
 
-        initialSession = result.data.session;
-        error = result.error;
+        if (result.timeout) {
+          console.warn('Auth initialization timed out.');
+          setLoading(false);
+          return;
+        }
+
+        initialSession = result.value.data.session;
+        error = result.value.error;
 
         if (!error) {
           break;
@@ -264,10 +271,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthUser(initialSession?.user ?? null);
       
       // Also race the profile load so it doesn't hang
-      await Promise.race([
-        loadProfile(initialSession?.user ?? null),
-        timeoutPromise
-      ]).catch(e => console.warn('Profile load timed out or failed', e));
+      const profileTimeout = new Promise<{ timeout: true }>((resolve) =>
+        setTimeout(() => resolve({ timeout: true }), timeoutMs)
+      );
+
+      const profileResult = await Promise.race([
+        loadProfile(initialSession?.user ?? null).then(() => ({ timeout: false as const })),
+        profileTimeout
+      ]);
+
+      if (profileResult.timeout) {
+        console.warn('Profile load timed out.');
+      }
 
     } catch (error) {
       console.error('Failed to initialize auth state:', error);
