@@ -89,29 +89,29 @@ export default function Home() {
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mx-auto">
                 <Calendar className="h-6 w-6" />
               </div>
-              <h3 className="text-3xl font-bold text-foreground">100+</h3>
-              <p className="text-sm text-muted-foreground">Events Hosted</p>
+              <h3 className="text-3xl font-bold text-foreground">—</h3>
+              <p className="text-sm text-muted-foreground">Events Hosted (coming soon)</p>
             </div>
             <div className="text-center space-y-2">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/20 text-accent-foreground mx-auto">
                 <Users className="h-6 w-6" />
               </div>
-              <h3 className="text-3xl font-bold text-foreground">500+</h3>
-              <p className="text-sm text-muted-foreground">Active Users</p>
+              <h3 className="text-3xl font-bold text-foreground">—</h3>
+              <p className="text-sm text-muted-foreground">Active Users (coming soon)</p>
             </div>
             <div className="text-center space-y-2">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mx-auto">
                 <MapPin className="h-6 w-6" />
               </div>
-              <h3 className="text-3xl font-bold text-foreground">20+</h3>
-              <p className="text-sm text-muted-foreground">Locations</p>
+              <h3 className="text-3xl font-bold text-foreground">—</h3>
+              <p className="text-sm text-muted-foreground">Locations (coming soon)</p>
             </div>
             <div className="text-center space-y-2">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/20 text-accent-foreground mx-auto">
                 <Trophy className="h-6 w-6" />
               </div>
-              <h3 className="text-3xl font-bold text-foreground">50+</h3>
-              <p className="text-sm text-muted-foreground">Top Organizers</p>
+              <h3 className="text-3xl font-bold text-foreground">—</h3>
+              <p className="text-sm text-muted-foreground">Top Organizers (coming soon)</p>
             </div>
           </div>
         </div>
