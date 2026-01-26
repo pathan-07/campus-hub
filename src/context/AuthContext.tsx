@@ -210,87 +210,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     const timeoutMs = 15000;
-    // Timeout promise to prevent infinite loading
     const timeoutPromise = new Promise<{ timeout: true }>((resolve) =>
       setTimeout(() => resolve({ timeout: true }), timeoutMs)
     );
 
-    try {
-      let attempt = 0;
-      let initialSession: Session | null = null;
-      let error: any = null;
+    const sessionPromise = supabase.auth.getSession();
 
-      while (attempt < 3) {
-        attempt += 1;
-        const result = await Promise.race([
-          supabase.auth.getSession().then((value) => ({ timeout: false as const, value })),
-          timeoutPromise
-        ]);
+    sessionPromise
+      .then(async ({ data: { session: initialSession }, error }) => {
+        if (error) {
+          const message = (error as Error)?.message ?? String(error);
+          console.error('Failed to retrieve Supabase session:', error);
 
-        if (result.timeout) {
-          console.warn('Auth initialization timed out.');
-          setLoading(false);
+          if (message.toLowerCase().includes('refresh token')) {
+            try {
+              const { data: userData, error: userError } = await supabase.auth.getUser();
+              if (!userError && userData?.user) {
+                setSession(null);
+                setAuthUser(userData.user);
+                await loadProfile(userData.user);
+                return;
+              }
+            } catch (fallbackError) {
+              console.warn('Failed to recover user from refresh token error:', fallbackError);
+            }
+          }
+
+          setSession(null);
+          setAuthUser(null);
+          setUser(null);
           return;
         }
 
-        initialSession = result.value.data.session;
-        error = result.value.error;
-
-        if (!error) {
-          break;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
-      }
-
-      if (error) {
-        const message = (error as Error)?.message ?? String(error);
-        console.error('Failed to retrieve Supabase session:', error);
-
-        if (message.toLowerCase().includes('refresh token')) {
-          try {
-            const { data: userData, error: userError } = await supabase.auth.getUser();
-            if (!userError && userData?.user) {
-              setSession(null);
-              setAuthUser(userData.user);
-              await loadProfile(userData.user);
-              return;
-            }
-          } catch (fallbackError) {
-            console.warn('Failed to recover user from refresh token error:', fallbackError);
-          }
-        }
-
+        setSession(initialSession);
+        setAuthUser(initialSession?.user ?? null);
+        await loadProfile(initialSession?.user ?? null);
+      })
+      .catch((error) => {
+        console.error('Failed to initialize auth state:', error);
         setSession(null);
         setAuthUser(null);
         setUser(null);
-        return;
-      }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
-      setSession(initialSession);
-      setAuthUser(initialSession?.user ?? null);
-      
-      // Also race the profile load so it doesn't hang
-      const profileTimeout = new Promise<{ timeout: true }>((resolve) =>
-        setTimeout(() => resolve({ timeout: true }), timeoutMs)
-      );
+    const race = await Promise.race([
+      sessionPromise.then(() => ({ timeout: false as const })),
+      timeoutPromise,
+    ]);
 
-      const profileResult = await Promise.race([
-        loadProfile(initialSession?.user ?? null).then(() => ({ timeout: false as const })),
-        profileTimeout
-      ]);
-
-      if (profileResult.timeout) {
-        console.warn('Profile load timed out.');
-      }
-
-    } catch (error) {
-      console.error('Failed to initialize auth state:', error);
-      // Fallback to logged out state on error/timeout
-      setSession(null);
-      setAuthUser(null);
-      setUser(null);
-    } finally {
+    if (race.timeout) {
+      console.warn('Auth initialization timed out.');
       setLoading(false);
     }
   }, [supabase, loadProfile]);
