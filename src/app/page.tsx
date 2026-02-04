@@ -81,37 +81,59 @@ export default function Home() {
         <div className="absolute bottom-20 right-10 w-32 h-32 bg-accent/30 rounded-full blur-3xl"></div>
       </section>
 
-      {/* Stats Section */}
+      {/* Quick Actions */}
       <section className="border-y bg-card/50">
         <div className="container mx-auto px-4 md:px-8 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center space-y-2">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-headline font-bold text-foreground">
+                Get started in minutes
+              </h2>
+              <p className="text-muted-foreground mt-2 max-w-2xl">
+                Browse events, create your own, and check in attendees—all from one place.
+              </p>
+            </div>
+            <Button asChild className="md:self-start">
+              <Link href="/login">Sign in to continue</Link>
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="rounded-2xl border bg-background p-6 hover:shadow-md transition">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-4">
                 <Calendar className="h-6 w-6" />
               </div>
-              <h3 className="text-3xl font-bold text-foreground">—</h3>
-              <p className="text-sm text-muted-foreground">Events Hosted (coming soon)</p>
+              <h3 className="text-lg font-semibold text-foreground">Discover events</h3>
+              <p className="text-muted-foreground mt-2">
+                Find upcoming talks, workshops, and meetups tailored for your campus.
+              </p>
+              <Button variant="link" className="px-0" asChild>
+                <Link href="#events">Explore events</Link>
+              </Button>
             </div>
-            <div className="text-center space-y-2">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/20 text-accent-foreground mx-auto">
-                <Users className="h-6 w-6" />
+            <div className="rounded-2xl border bg-background p-6 hover:shadow-md transition">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-accent/20 text-accent-foreground mb-4">
+                <Sparkles className="h-6 w-6" />
               </div>
-              <h3 className="text-3xl font-bold text-foreground">—</h3>
-              <p className="text-sm text-muted-foreground">Active Users (coming soon)</p>
+              <h3 className="text-lg font-semibold text-foreground">Create & manage</h3>
+              <p className="text-muted-foreground mt-2">
+                Publish an event, set capacity, and manage attendees with ease.
+              </p>
+              <Button variant="link" className="px-0" asChild>
+                <Link href="/login">Create an event</Link>
+              </Button>
             </div>
-            <div className="text-center space-y-2">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mx-auto">
-                <MapPin className="h-6 w-6" />
+            <div className="rounded-2xl border bg-background p-6 hover:shadow-md transition">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary mb-4">
+                <QrCode className="h-6 w-6" />
               </div>
-              <h3 className="text-3xl font-bold text-foreground">—</h3>
-              <p className="text-sm text-muted-foreground">Locations (coming soon)</p>
-            </div>
-            <div className="text-center space-y-2">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-accent/20 text-accent-foreground mx-auto">
-                <Trophy className="h-6 w-6" />
-              </div>
-              <h3 className="text-3xl font-bold text-foreground">—</h3>
-              <p className="text-sm text-muted-foreground">Top Organizers (coming soon)</p>
+              <h3 className="text-lg font-semibold text-foreground">Fast check-in</h3>
+              <p className="text-muted-foreground mt-2">
+                Scan tickets and verify attendees quickly at the door.
+              </p>
+              <Button variant="link" className="px-0" asChild>
+                <Link href="/login">Go to scanner</Link>
+              </Button>
             </div>
           </div>
         </div>
