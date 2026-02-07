@@ -17,8 +17,8 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
-import { registerForEvent, sendTicketByEmail } from '@/lib/events';
+import { useEffect, useState } from 'react';
+import { getAttendeeCount, registerForEvent, sendTicketByEmail } from '@/lib/events';
 import * as QRCode from 'qrcode';
 import Link from 'next/link';
 
@@ -35,11 +35,42 @@ export function EventCard({ event, withActions = true, onGetTicket, compact = fa
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [attendeeCount, setAttendeeCount] = useState<number>(event.attendees ?? event.attendeeUids?.length ?? 0);
   
   const isCollegeEvent = event.type === 'college';
   const isUserAttending = user && isCollegeEvent ? event.attendeeUids?.includes(user.uid) : false;
+  const [isRegistered, setIsRegistered] = useState(isUserAttending);
   const isUserHost = user && isCollegeEvent ? event.authorId === user.uid : false;
   const isPastEvent = eventDate < new Date();
+
+  useEffect(() => {
+    setIsRegistered(isUserAttending);
+  }, [isUserAttending]);
+
+  useEffect(() => {
+    if (!isCollegeEvent) {
+      return;
+    }
+
+    let active = true;
+
+    const loadCount = async () => {
+      try {
+        const count = await getAttendeeCount(event.id);
+        if (active) {
+          setAttendeeCount(count);
+        }
+      } catch (error) {
+        console.error('Failed to fetch attendee count:', error);
+      }
+    };
+
+    void loadCount();
+
+    return () => {
+      active = false;
+    };
+  }, [event.id, isCollegeEvent]);
 
   const handleRsvp = async () => {
     if (!user) {
@@ -75,6 +106,11 @@ export function EventCard({ event, withActions = true, onGetTicket, compact = fa
         title: 'Success!',
         description: `You're registered for "${event.title}". Your ticket is downloading.`,
       });
+
+      if (!isRegistered) {
+        setIsRegistered(true);
+        setAttendeeCount((prev) => prev + 1);
+      }
 
     } catch (error: any) {
       toast({
@@ -141,8 +177,8 @@ export function EventCard({ event, withActions = true, onGetTicket, compact = fa
               <Users className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
-              <p className="font-medium text-foreground">{event.attendees || 0} attending</p>
-              {isUserAttending && (
+              <p className="font-medium text-foreground">{attendeeCount} attending</p>
+              {isRegistered && (
                 <p className="text-xs text-green-600 dark:text-green-400 font-medium">
                   ✓ You're registered
                 </p>
@@ -194,14 +230,14 @@ export function EventCard({ event, withActions = true, onGetTicket, compact = fa
               ) : (
                 <Button
                   size="sm"
-                  variant={isUserAttending ? 'secondary' : 'default'}
+                  variant={isRegistered ? 'secondary' : 'default'}
                   onClick={handleRsvp}
-                  disabled={isLoading || isUserAttending}
+                  disabled={isLoading || isRegistered}
                   className="flex-1 sm:flex-none"
                 >
                   {isLoading ? (
                     <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  ) : isUserAttending ? (
+                  ) : isRegistered ? (
                     <>
                       <Check className="mr-1.5 h-4 w-4" />
                       Registered
